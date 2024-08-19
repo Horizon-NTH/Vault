@@ -62,8 +62,13 @@ TEST_F(VaultTest, Close)
 
     EXPECT_FALSE(std::filesystem::exists("test_vault"));
     EXPECT_TRUE(std::filesystem::exists("test_vault.vlt"));
-    EXPECT_EQ(read_file("test_vault.vlt"),
-        std::string("<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n"));
+#if defined(_WIN32)
+    EXPECT_EQ(read_file("test_vault.vlt"), std::string("<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n"));
+#elif defined(__APPLE) || defined(__MACH__)
+    EXPECT_EQ(read_file("test_vault.vlt"), std::string("<vault name=\"test_vault\">\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n"));
+#elif defined(__linux__)
+    EXPECT_EQ(read_file("test_vault.vlt"), std::string("<vault name=\"test_vault\">\n\t<directory name=\"inner\">\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t</directory>\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n</vault>\n"));
+#endif
 }
 
 TEST_F(VaultTest, CloseEmptyVault)

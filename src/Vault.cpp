@@ -3,6 +3,7 @@
 #include "../include/Base64.h"
 #include <stack>
 #include <fstream>
+#include <sstream>
 
 Vault::Status::Status(const std::filesystem::path& name, bool opened, const std::optional<std::string>& extension):
 	Directory::Status(name),
@@ -234,7 +235,7 @@ std::vector<std::string> Vault::tokenize(std::string&& content)
 			do
 				res += content[pos++]; while (pos < size && content[pos] != c);
 			if (pos == size)
-				throw std::runtime_error("Invalid vault file format: missing closing tag " + c);
+				throw std::runtime_error(std::string("Invalid vault file format: missing closing tag ") + c);
 			if (includeDelimiter)
 				res += content[pos++];
 			return res;

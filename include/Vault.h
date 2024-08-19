@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Directory.h"
+#include <optional>
 
 class Vault final : public Directory
 {
