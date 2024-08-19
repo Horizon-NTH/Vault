@@ -1,4 +1,5 @@
 #include "../include/Base64.h"
+
 #include <stdexcept>
 
 std::string Base64::encode(const std::vector<uint8_t>& data)

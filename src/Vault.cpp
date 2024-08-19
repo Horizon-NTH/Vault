@@ -34,16 +34,20 @@ Vault::Vault(const std::filesystem::directory_entry& file, const std::optional<s
 void Vault::open(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination)
 {
 	auto vault = Vault(std::filesystem::directory_entry(path));
+	if (const auto status = dynamic_cast<Status*>(vault.status().get()); !status || status->opened)
+		throw std::invalid_argument("You can't open a vault that is already opened");
 	vault.remove();
-	vault.m_file = std::filesystem::directory_entry(destination.value_or(path));
+	vault.m_file = std::filesystem::directory_entry(destination.value_or(path.parent_path()) / vault.m_status->name);
 	vault.write_to_dir();
 }
 
 void Vault::close(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension)
 {
 	auto vault = Vault(std::filesystem::directory_entry(path), extension);
+	if (const auto status = dynamic_cast<Status*>(vault.status().get()); !status || !status->opened)
+		throw std::invalid_argument("You can't close a vault that is already closed");
 	vault.remove();
-	vault.m_file = std::filesystem::directory_entry(destination.value_or(path));
+	vault.m_file = std::filesystem::directory_entry(destination.value_or(path.parent_path()) / vault.m_status->name);
 	vault.write_to_file();
 }
 
@@ -70,6 +74,8 @@ void Vault::read_from_dir()
 				dirs_to_visit.emplace(entry.path(), *directory);
 				dir.get().children().push_back(std::move(directory));
 			}
+			else
+				throw std::runtime_error("Invalid vault file format: " + entry.path().string() + " is not a regular file or directory");
 		}
 	}
 }
