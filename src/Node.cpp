@@ -1,6 +1,5 @@
+#include "Node.h"
 #include <utility>
-
-#include "../include/Node.h"
 
 Node::Status::Status(std::filesystem::path name):
 	name(std::move(name))
