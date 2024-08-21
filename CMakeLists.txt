@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(Vault VERSION 0.0)
+project(vault VERSION 0.0)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 
@@ -10,6 +10,7 @@ set(HEADER_FILES
 	include/File.h
 	include/Directory.h
 	include/Vault.h
+	include/ArgumentsParser.h
 )
 
 set(SOURCE_FILES
@@ -18,9 +19,11 @@ set(SOURCE_FILES
 	src/File.cpp
 	src/Directory.cpp
 	src/Vault.cpp
+	src/ArgumentsParser.cpp
 )
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
+include_directories(include)
 
 add_library(${PROJECT_LIB} STATIC ${HEADER_FILES} ${SOURCE_FILES})
 

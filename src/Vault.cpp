@@ -1,6 +1,6 @@
-#include "../include/Vault.h"
-#include "../include/File.h"
-#include "../include/Base64.h"
+#include "Vault.h"
+#include "File.h"
+#include "Base64.h"
 #include <stack>
 #include <fstream>
 #include <sstream>

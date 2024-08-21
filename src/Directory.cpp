@@ -1,4 +1,4 @@
-#include "../include/Directory.h"
+#include "Directory.h"
 
 Directory::Directory(std::unique_ptr<Status> status):
 	Node(std::move(status))

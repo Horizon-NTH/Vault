@@ -14,6 +14,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(TEST_SOURCES
 	src/Base64Test.cpp
 	src/VaultTest.cpp
+	src/ArgumentsParserTest.cpp
 )
 
 add_executable(runTests ${TEST_SOURCES})

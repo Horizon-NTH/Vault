@@ -1,5 +1,5 @@
-#include "../include/File.h"
-#include "../include/Base64.h"
+#include "File.h"
+#include "Base64.h"
 #include <fstream>
 
 File::File(std::unique_ptr<Status> status, std::string&& data):
