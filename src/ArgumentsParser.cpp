@@ -39,7 +39,7 @@ void ArgumentsParser::parse()
 		{
 			if (m_options.contains(*option))
 				throw std::invalid_argument("Option " + std::string(*option) + " already has the value " + std::string(m_options[*option].value()));
-			if (const auto value = get_integrated_value(*it); !value && !get_option(*(it + 1), m_command))
+			if (const auto value = get_integrated_value(*it); !value && it + 1 != m_args.end() && !get_option(*(it + 1), m_command))
 				m_options[*option] = *++it;
 			else
 				m_options[*option] = value;
@@ -49,7 +49,7 @@ void ArgumentsParser::parse()
 
 bool ArgumentsParser::is_help() const
 {
-	if (m_args.empty() || m_args.front() == "-h"sv || m_args.front() == "--help"sv)
+	if (m_args.empty() || std::ranges::any_of(std::array{"help"sv, "-h"sv, "--help"sv}, [opt=m_args.front()](const auto& arg) { return arg == opt; }))
 		return true;
 	return false;
 }
@@ -77,7 +77,7 @@ std::optional<std::string_view> ArgumentsParser::get_option(const std::string_vi
 			return option;
 		throw std::invalid_argument("Invalid option: " + std::string(arg) + " is not an option of command " + std::string(command));
 	}
-	if (arg[0] == '-' && arg.size() > 1)
+	if (arg.size() > 1 && arg[0] == '-')
 	{
 		const auto existingOptions = get_existing_options_of(command);
 		if (const auto it = std::ranges::find_if(existingOptions, [&](const auto& opt) { return opt[0] == arg[1]; }); it != existingOptions.end())

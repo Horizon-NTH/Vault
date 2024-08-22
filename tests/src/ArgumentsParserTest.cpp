@@ -20,6 +20,14 @@ TEST_F(ArgumentsParserTest, NoArgumentsBehaveAsHelp)
 	EXPECT_TRUE(parser->options().empty());
 }
 
+TEST_F(ArgumentsParserTest, HelpCommand)
+{
+	const char* argv[] = {"program", "help"};
+	EXPECT_NO_THROW(init(std::span(argv)));
+	EXPECT_EQ(parser->command(), "help");
+	EXPECT_TRUE(parser->options().empty());
+}
+
 TEST_F(ArgumentsParserTest, ShortHelpArgument)
 {
 	const char* argv[] = {"program", "-h"};
@@ -301,4 +309,10 @@ TEST_F(ArgumentsParserTest, InvlaidCloseCommandWithExplicitFlagsAfterPositional)
 {
 	const char* argv1[] = {"program", "close", "--vault", "/path/to/vault.vlt", "/path/to/destination", "-d", ".ext"};
 	EXPECT_THROW(init(std::span(argv1)), std::invalid_argument);
+}
+
+TEST_F(ArgumentsParserTest, CommandWithEmptyLastFlag)
+{
+	const char* argv1[] = {"program", "close", "--vault"};
+	EXPECT_NO_THROW(init(std::span(argv1)), std::invalid_argument);
 }
