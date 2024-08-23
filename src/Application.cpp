@@ -32,18 +32,21 @@ void Application::parse_command() const
 {
 	if (auto [command, options] = std::make_pair(m_parser.command(), m_parser.options()); command == "help")
 	{
-		m_command = [=] { print_help(); };
+		m_command = [this] { print_help(); };
 	}
 	else if (command == "open")
 	{
-		const auto& [vault, destination] = std::make_pair(options["vault"], options["destination"]);
+		const auto vault = options["vault"],
+				destination = options["destination"];
 		if (!vault)
 			throw std::runtime_error("Vault is required");
 		m_command = [=] { Vault::open(*vault, destination); };
 	}
 	else if (command == "close")
 	{
-		const auto& [vault, destination, extension] = std::make_tuple(options["vault"], options["destination"], options["extension"]);
+		const auto vault = options["vault"],
+				destination = options["destination"],
+				extension = options["extension"];
 		if (!vault)
 			throw std::runtime_error("Vault is required");
 		m_command = [=] { Vault::close(*vault, destination, static_cast<std::optional<std::string>>(extension)); };

@@ -314,5 +314,5 @@ TEST_F(ArgumentsParserTest, InvlaidCloseCommandWithExplicitFlagsAfterPositional)
 TEST_F(ArgumentsParserTest, CommandWithEmptyLastFlag)
 {
 	const char* argv1[] = {"program", "close", "--vault"};
-	EXPECT_NO_THROW(init(std::span(argv1)), std::invalid_argument);
+	EXPECT_NO_THROW(init(std::span(argv1)));
 }
