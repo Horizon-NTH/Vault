@@ -23,14 +23,21 @@ const ArgumentsParser::optionsList& ArgumentsParser::options() const
 
 void ArgumentsParser::parse()
 {
-	if (is_help())
+	if (m_args.empty())
 	{
 		m_command = "help"sv;
 		return;
 	}
-	if (!is_command(m_args.front()))
-		throw std::invalid_argument("Invalid command");
-	m_command = m_args.front();
+	const auto front = m_args.front();
+	if (!is_sub_command(front))
+	{
+		const auto option = get_option(front, "vault"sv);
+		if (!option)
+			throw std::invalid_argument("Invalid vault option: " + std::string(front));
+		m_command = option.value();
+		return;
+	}
+	m_command = front;
 	for (auto it = m_args.begin() + 1; it != m_args.end(); ++it)
 	{
 		if (const auto option = get_option(*it, m_command); !option)
@@ -45,13 +52,6 @@ void ArgumentsParser::parse()
 				m_options[*option] = value;
 		}
 	}
-}
-
-bool ArgumentsParser::is_help() const
-{
-	if (m_args.empty() || std::ranges::any_of(std::array{"help"sv, "-h"sv, "--help"sv}, [opt=m_args.front()](const auto& arg) { return arg == opt; }))
-		return true;
-	return false;
 }
 
 void ArgumentsParser::add_positional_option(const std::string_view& arg)
@@ -105,21 +105,21 @@ std::optional<std::string_view> ArgumentsParser::get_integrated_value(const std:
 	return arg;
 }
 
-bool ArgumentsParser::is_command(const std::string_view& arg)
+bool ArgumentsParser::is_sub_command(const std::string_view& arg)
 {
-	return std::ranges::any_of(m_commands, [&](const auto& command) { return command.first == arg; }) || arg == "-h"sv || arg == "--help"sv;
+	return std::any_of(m_commands.begin() + 1, m_commands.end(), [&](const auto& command) { return command.first == arg; });
 }
 
 bool ArgumentsParser::is_option_of(const std::string_view& command, const std::string_view& option)
 {
-	if (!is_command(command))
+	if (!is_sub_command(command) && command != "vault"sv)
 		throw std::invalid_argument("Not a valid command: " + std::string(command));
 	return std::ranges::any_of(get_existing_options_of(command), [&](const auto& opt) { return opt == option; });
 }
 
 const std::vector<std::string_view>& ArgumentsParser::get_existing_options_of(const std::string_view& command)
 {
-	if (!is_command(command) || command == "-h"sv || command == "--help"sv)
+	if (!is_sub_command(command) && command != "vault"sv)
 		throw std::invalid_argument("Not a valid command: " + std::string(command));
 	return std::ranges::find_if(m_commands, [&](const auto& c) { return c.first == command; })->second;
 }

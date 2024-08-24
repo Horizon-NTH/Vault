@@ -31,11 +31,13 @@ git clone https://github.com/Horizon-NTH/Vault.git
 ### Build
 
 Ensure you have [CMake](https://cmake.org/) installed.  
-Generate the build environment and then using CMake:
+Generate the build environment and then build using CMake.
+
+> You can also enable the [_tests_](https://github.com/google/googletest) by setting the `ENABLE_TESTS` option to `ON`.
 
 ```bash
 mkdir build && cd build
-cmake ..
+cmake .. -DENABLE_TESTS=ON
 make
 ```
 
@@ -53,7 +55,6 @@ You can now run the application with the following command:
 
 - `open` : Open a vault to access its contents.
 - `close` : Close a vault and save its contents to a single file.
-- `help` : Display help information.
 
 ### Options
 
@@ -80,21 +81,18 @@ Exemple :
 ./vault close --vault=/path/to/vault --destination=/output/path --extension=.vlt
 ```
 
-### Help
+### Special Commands
 
-To display help information, use one the following commands:
+To display **help** information, use one the following commands:
 
 ```bash
-./vault [ help | --help | -h ]
+./vault [ --help | -h ]
 ```
 
-## Tests
-
-The project uses [Google Test](https://github.com/google/googletest) for unit testing.
-You can run the tests with the following command:
+To display the **version** of the application, use one the following commands:
 
 ```bash
-make runTests
+./vault [ --version | -v ]
 ```
 
 ## License

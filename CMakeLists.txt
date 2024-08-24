@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(vault VERSION 0.0)
+project(vault VERSION 0.1)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 
@@ -31,6 +31,7 @@ add_library(${PROJECT_LIB} STATIC ${HEADER_FILES} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_LIB} PUBLIC include)
 target_compile_features(${PROJECT_LIB} PUBLIC cxx_std_20)
+target_compile_definitions(${PROJECT_LIB} PUBLIC PROJECT_VERSION="${PROJECT_VERSION}")
 
 add_executable(${PROJECT_NAME} src/Main.cpp)
 
