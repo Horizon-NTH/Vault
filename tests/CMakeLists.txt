@@ -15,6 +15,7 @@ set(TEST_SOURCES
 	src/Base64Test.cpp
 	src/VaultTest.cpp
 	src/ArgumentsParserTest.cpp
+	src/ApplicationTest.cpp
 )
 
 add_executable(runTests ${TEST_SOURCES})

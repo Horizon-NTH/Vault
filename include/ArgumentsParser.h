@@ -15,6 +15,7 @@ class ArgumentsParser
 	using existingCommand = std::pair<std::string_view, existingOptions>;
 
 	static inline const auto m_commands = std::array{
+				existingCommand{"help"sv, existingOptions{}},
 				existingCommand{"open"sv, existingOptions{
 					                "vault"sv,
 					                "destination"sv,

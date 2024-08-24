@@ -11,6 +11,7 @@ set(HEADER_FILES
 	include/Directory.h
 	include/Vault.h
 	include/ArgumentsParser.h
+	include/Application.h
 )
 
 set(SOURCE_FILES
@@ -20,6 +21,7 @@ set(SOURCE_FILES
 	src/Directory.cpp
 	src/Vault.cpp
 	src/ArgumentsParser.cpp
+	src/Application.cpp
 )
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
