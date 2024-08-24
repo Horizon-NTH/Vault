@@ -18,4 +18,5 @@ private:
 	void parse_command() const;
 
 	static void print_help();
+	static void print_version();
 };

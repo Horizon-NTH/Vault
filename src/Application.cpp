@@ -15,17 +15,10 @@ Application::Application(const std::span<const char*>& args):
 
 void Application::execute() const
 {
-	try
-	{
-		if (m_command)
-			m_command();
-		else
-			throw std::runtime_error("No command to execute");
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "Error: " << e.what() << '\n';
-	}
+	if (m_command)
+		m_command();
+	else
+		throw std::runtime_error("No command to execute");
 }
 
 void Application::parse_command() const
@@ -33,6 +26,10 @@ void Application::parse_command() const
 	if (auto [command, options] = std::make_pair(m_parser.command(), m_parser.options()); command == "help")
 	{
 		m_command = [this] { print_help(); };
+	}
+	else if (command == "version")
+	{
+		m_command = [] { std::cout << "Vault v1.0\n"; };
 	}
 	else if (command == "open")
 	{
@@ -69,5 +66,10 @@ void Application::print_help()
 			<< "  -e, --extension <ext>         (Optional) File extension to use when closing the vault.\n\n"
 			<< "Examples:\n"
 			<< "  vault open -v /path/to/vault -d /output/path\n"
-			<< "  vault close --vault=/path/to/vault --extension=.vlt\n\n";
+			<< "  vault close --vault=/path/to/vault --extension=.vlt\n" << std::endl;
+}
+
+void Application::print_version()
+{
+	std::cout << "Vault version " << PROJECT_VERSION << std::endl;
 }

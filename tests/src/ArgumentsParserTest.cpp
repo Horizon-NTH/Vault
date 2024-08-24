@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "ArgumentsParser.h"
 
-class ArgumentsParserTest : public ::testing::Test
+class ArgumentsParserTest : public testing::Test
 {
 protected:
 	std::unique_ptr<ArgumentsParser> parser;
@@ -15,14 +15,6 @@ protected:
 TEST_F(ArgumentsParserTest, NoArgumentsBehaveAsHelp)
 {
 	const char* argv[] = {"program"};
-	EXPECT_NO_THROW(init(std::span(argv)));
-	EXPECT_EQ(parser->command(), "help");
-	EXPECT_TRUE(parser->options().empty());
-}
-
-TEST_F(ArgumentsParserTest, HelpCommand)
-{
-	const char* argv[] = {"program", "help"};
 	EXPECT_NO_THROW(init(std::span(argv)));
 	EXPECT_EQ(parser->command(), "help");
 	EXPECT_TRUE(parser->options().empty());
@@ -44,6 +36,22 @@ TEST_F(ArgumentsParserTest, LongHelpArgument)
 	EXPECT_TRUE(parser->options().empty());
 }
 
+TEST_F(ArgumentsParserTest, ShortVersionArgument)
+{
+	const char* argv[] = {"program", "-v"};
+	EXPECT_NO_THROW(init(std::span(argv)));
+	EXPECT_EQ(parser->command(), "version");
+	EXPECT_TRUE(parser->options().empty());
+}
+
+TEST_F(ArgumentsParserTest, LongVersionArgument)
+{
+	const char* argv[] = {"program", "--version"};
+	EXPECT_NO_THROW(init(std::span(argv)));
+	EXPECT_EQ(parser->command(), "version");
+	EXPECT_TRUE(parser->options().empty());
+}
+
 TEST_F(ArgumentsParserTest, OtherArgumentsAfterHelpIgnored)
 {
 	const char* argv[] = {"program", "-h", "other"};
@@ -55,6 +63,18 @@ TEST_F(ArgumentsParserTest, OtherArgumentsAfterHelpIgnored)
 TEST_F(ArgumentsParserTest, InvalidCommand)
 {
 	const char* argv[] = {"program", "invalid"};
+	EXPECT_THROW(init(std::span(argv)), std::invalid_argument);
+}
+
+TEST_F(ArgumentsParserTest, InvalidVaultShortOption)
+{
+	const char* argv[] = {"program", "-u"};
+	EXPECT_THROW(init(std::span(argv)), std::invalid_argument);
+}
+
+TEST_F(ArgumentsParserTest, InvalidVaultLongOption)
+{
+	const char* argv[] = {"program", "--unknown"};
 	EXPECT_THROW(init(std::span(argv)), std::invalid_argument);
 }
 
