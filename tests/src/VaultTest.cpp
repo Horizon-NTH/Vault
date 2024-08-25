@@ -37,6 +37,7 @@ void cleanup_test_environment()
     std::filesystem::remove_all("test_destination");
     std::filesystem::remove_all("test_vault_bad");
     std::filesystem::remove("test_vault.vlt");
+    std::filesystem::remove("test_vault.vault");
     std::filesystem::remove("test_vault_bad.vlt");
 }
 
@@ -251,6 +252,13 @@ TEST_F(VaultTest, InvalidCloseVaultFile)
     EXPECT_THROW(Vault::close("test_vault.vlt"), std::invalid_argument);
 }
 
+TEST_F(VaultTest, IncorrectlyEncodedDataField)
+{
+    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="InvalidBase64Data@#%"/></vault>)");
+
+    EXPECT_THROW(Vault::close("test_vault_bad.vlt"), std::invalid_argument);
+}
+
 TEST_F(VaultTest, OpenCloseWithCustomExtension)
 {
     std::filesystem::create_directory("test_vault");
@@ -304,90 +312,6 @@ TEST_F(VaultTest, InvalidCloseWithSymbolicDirectory)
         EXPECT_THROW(Vault::close("test_vault"), std::runtime_error);
     }
     catch (...) {}
-}
-
-TEST_F(VaultTest, MissingClosingVaultTag)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="leGFtcGxlI"/>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, ImproperlyClosedVaultTag)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="leGFtcGxlI"/><vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, MalformedFileTag)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt">leGFtcGxlI</file></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, MalformedDirectoryTag)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><directory name="folderExemple1"/></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, ImproperlyClosedDirectoryTag)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="leGFtcGxlI"/><directory name="folderExemple1"><file name="fileExemple2.txt" data="GUgaG9vay"/></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, TooMuchClosingDirectoryTags)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><directory name="folderExemple1"><file name="fileExemple1.txt" data="GUgaG9vay"/></directory></directory></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, IncorrectlyEncodedDataField)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="InvalidBase64Data@#%"/></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::invalid_argument);
-}
-
-TEST_F(VaultTest, MissingFileAttributes)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file data="GUgaG9vay"/></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, UnknowFileAttribute)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="GUgaG9vay" date="2021-09-01"/></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, FileDataTagNotNecessary)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt"/></vault>)");
-
-    EXPECT_NO_THROW(Vault::open("test_vault_bad.vlt"));
-}
-
-TEST_F(VaultTest, MissingDirectoryAttributes)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><directory><file name="fileExemple1.txt" data="GUgaG9vay"/></directory></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
-}
-
-TEST_F(VaultTest, UnknowDirectoryAttribute)
-{
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><directory date="2021-08-01" name="folderExemple1"><file name="fileExemple1.txt" data="GUgaG9vay"/></directory></vault>)");
-
-    EXPECT_THROW(Vault::open("test_vault_bad.vlt"), std::runtime_error);
 }
 
 TEST_F(VaultTest, CloseWithSpecifiedDestination)

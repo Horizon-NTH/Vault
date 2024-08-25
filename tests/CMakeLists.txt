@@ -16,6 +16,7 @@ set(TEST_SOURCES
 	src/VaultTest.cpp
 	src/ArgumentsParserTest.cpp
 	src/ApplicationTest.cpp
+	src/XMLParserTest.cpp
 )
 
 add_executable(runTests ${TEST_SOURCES})
