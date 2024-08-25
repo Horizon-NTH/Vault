@@ -28,9 +28,7 @@ private:
 	void read_from_file();
 	void write_to_file() const;
 	void remove() const;
+	void extract_from_xml(std::string&& content);
 
 	void write_content(std::ostream& os, size_t indentation) const override;
-	void parse_tokens(std::vector<std::string>& tokens);
-
-	static std::vector<std::string> tokenize(std::string&& content);
 };

@@ -12,6 +12,8 @@ set(HEADER_FILES
 	include/Vault.h
 	include/ArgumentsParser.h
 	include/Application.h
+	include/XMLParser.h
+	include/XMLNode.h
 )
 
 set(SOURCE_FILES
@@ -22,6 +24,8 @@ set(SOURCE_FILES
 	src/Vault.cpp
 	src/ArgumentsParser.cpp
 	src/Application.cpp
+	src/XMLParser.cpp
+	src/XMLNode.cpp
 )
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)

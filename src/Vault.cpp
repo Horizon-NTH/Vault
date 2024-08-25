@@ -1,6 +1,8 @@
 #include "Vault.h"
 #include "File.h"
 #include "Base64.h"
+#include "XMLParser.h"
+
 #include <stack>
 #include <fstream>
 #include <sstream>
@@ -100,17 +102,14 @@ void Vault::read_from_file()
 	if (!exists(vault_path))
 		throw std::runtime_error(vault_path.string() + " doesn't exists");
 
-	std::ifstream vault_file(vault_path.string());
+	const std::ifstream vault_file(vault_path.string());
 	if (!vault_file.is_open())
 		throw std::ios_base::failure("Failed to open the file: " + vault_path.string());
 
 	const std::stringstream ss = std::stringstream{} << vault_file.rdbuf();
 	std::string content = ss.str();
 
-	auto tokens = tokenize(std::move(content));
-	parse_tokens(tokens);
-
-	vault_file.close();
+	extract_from_xml(std::move(content));
 }
 
 void Vault::write_to_file() const
@@ -134,6 +133,39 @@ void Vault::remove() const
 	remove_all(m_file);
 }
 
+void Vault::extract_from_xml(std::string&& content)
+{
+	auto node = XMLParser::parse(std::move(content));
+	if (node->tag() != "vault")
+		throw std::runtime_error("Invalid vault file format: missing vault tag");
+	m_status->name = node->attributes().at("name");
+
+	std::deque<std::pair<std::unique_ptr<XMLNode>, std::reference_wrapper<Directory>>> dirs;
+	dirs.emplace_back(std::move(node), std::ref(*this));
+	while (!dirs.empty())
+	{
+		for (auto& [xmlNode, dir] = dirs.front(); auto& child : xmlNode->children())
+		{
+			if (child->tag() == "file")
+			{
+				const auto name = child->attributes().at("name");
+				auto data = child->attributes().at("data");
+				dir.get().children().push_back(std::make_unique<File>(std::make_unique<File::Status>(name), std::move(data)));
+			}
+			else if (child->tag() == "directory")
+			{
+				const auto name = child->attributes().at("name");
+				auto directory = std::make_unique<Directory>(std::make_unique<Directory::Status>(name));
+				dirs.emplace_back(std::move(child), std::ref(*directory));
+				dir.get().children().push_back(std::move(directory));
+			}
+			else
+				throw std::runtime_error("Invalid vault file format: unknown tag " + std::string(child->tag()));
+		}
+		dirs.pop_front();
+	}
+}
+
 void Vault::write_content(std::ostream& os, const size_t indentation) const
 {
 	const std::string indentation_str(indentation, '\t');
@@ -143,140 +175,4 @@ void Vault::write_content(std::ostream& os, const size_t indentation) const
 		child->write_content(os, indentation + 1);
 	}
 	os << indentation_str << "</vault>" << std::endl;
-}
-
-void Vault::parse_tokens(std::vector<std::string>& tokens)
-{
-	std::stack<std::reference_wrapper<Directory>> dirs;
-	dirs.emplace(std::ref(*this));
-	const auto get_data_without_quotes = [](std::string&& data)
-		{
-			return data.substr(1, data.size() - 2);
-		};
-
-	if (tokens.empty())
-		throw std::runtime_error("Invalid vault file format: empty file");
-	if (tokens.front() != "<vault")
-		throw std::runtime_error("Invalid vault file format: missing vault tag");
-	if (tokens.back() != "</vault>")
-		throw std::runtime_error("Invalid vault file format: missing closing vault tag");
-	if (tokens.size() < 3)
-		throw std::runtime_error("Invalid vault file format: missing vault attributes");
-	for (auto it = tokens.begin(); it != tokens.end();)
-	{
-		if (*it == "<vault")
-		{
-			while (*++it != ">")
-			{
-				if (*it == "name=")
-					m_status->name = get_data_without_quotes(std::move(*++it));
-				else
-					throw std::runtime_error("Invalid vault file format: unknown vault attribute");
-			}
-		}
-		else if (*it == "<file")
-		{
-			auto status = std::make_unique<Status>();
-			std::string data;
-			while (*++it != "/>")
-			{
-				if (*it == "name=")
-					status->name = get_data_without_quotes(std::move(*++it));
-				else if (*it == "data=")
-					data = get_data_without_quotes(std::move(*++it));
-				else
-					throw std::runtime_error("Invalid vault file format: unknown file attribute");
-			}
-			dirs.top().get().children().push_back(std::make_unique<File>(std::move(status), std::move(data)));
-		}
-		else if (*it == "<directory")
-		{
-			auto status = std::make_unique<Status>();
-			while (*++it != ">")
-			{
-				if (*it == "name=")
-					status->name = get_data_without_quotes(std::move(*++it));
-				else
-					throw std::runtime_error("Invalid vault file format: unknown directory attribute");
-			}
-			auto directory = std::make_unique<Directory>(std::move(status));
-			auto ref = std::ref(*directory);
-			dirs.top().get().children().push_back(std::move(directory));
-			dirs.push(ref);
-		}
-		else if (*it == "</directory>")
-		{
-			dirs.pop();
-		}
-		else if (*it == "</vault>")
-		{
-			if (dirs.size() != 1)
-				throw std::runtime_error("Invalid vault file format: missing closing directory tag");
-			if (++it != tokens.end())
-				throw std::runtime_error("Invalid vault file format: unexpected tokens after closing vault tag");
-			return;
-		}
-		else
-		{
-			throw std::runtime_error("Invalid vault file format: unknown tag");
-		}
-		++it;
-	}
-}
-
-std::vector<std::string> Vault::tokenize(std::string&& content)
-{
-	std::vector<std::string> tokens;
-	const size_t size = content.size();
-	size_t pos = content.find_first_of('<');
-	const auto get_until = [&](const char c, const bool includeDelimiter = true) -> std::string
-		{
-			std::string res;
-			do
-				res += content[pos++]; while (pos < size && content[pos] != c);
-			if (pos == size)
-				throw std::runtime_error(std::string("Invalid vault file format: missing closing tag ") + c);
-			if (includeDelimiter)
-				res += content[pos++];
-			return res;
-		};
-	const auto skip_blanks = [&]
-		{
-			while (pos < size && (content[pos] == ' ' || content[pos] == '\t' || content[pos] == '\n'))
-				++pos;
-		};
-	const auto append = [&](std::string&& token)
-		{
-			tokens.push_back(std::move(token));
-			skip_blanks();
-		};
-
-	while (pos < size)
-	{
-		if (content[pos] == '<')
-		{
-			if (content[pos + 1] == '/')
-				append(get_until('>'));
-			else
-				append(get_until(' ', false));
-		}
-		else if (content[pos] == '/')
-		{
-			append(get_until('>'));
-		}
-		else if (content[pos] == '>')
-		{
-			append((++pos, ">"));
-		}
-		else if (content[pos] == '"')
-		{
-			append(get_until('"'));
-		}
-		else
-		{
-			append(get_until('='));
-		}
-	}
-
-	return std::move(tokens);
 }
