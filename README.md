@@ -31,14 +31,20 @@ git clone https://github.com/Horizon-NTH/Vault.git
 ### Build
 
 Ensure you have [CMake](https://cmake.org/) installed.  
-Generate the build environment and then build using CMake.
+Generate the build environment using CMake and build the application.
 
 > You can also enable the [_tests_](https://github.com/google/googletest) by setting the `ENABLE_TESTS` option to `ON`.
 
 ```bash
 mkdir build && cd build
-cmake .. -DENABLE_TESTS=ON
-make
+cmake .. [-DENABLE_TESTS=ON]
+make 
+```
+
+You can also install the application on your system using the following command:
+
+```bash
+sudo make install
 ```
 
 ### Execute

@@ -29,7 +29,7 @@ void Application::parse_command() const
 	}
 	else if (command == "version")
 	{
-		m_command = [] { std::cout << "Vault v1.0\n"; };
+		m_command = [] { print_version(); };
 	}
 	else if (command == "open")
 	{
@@ -66,7 +66,7 @@ void Application::print_help()
 			<< "  -e, --extension <ext>         (Optional) File extension to use when closing the vault.\n\n"
 			<< "Examples:\n"
 			<< "  vault open -v /path/to/vault -d /output/path\n"
-			<< "  vault close --vault=/path/to/vault --extension=.vlt\n" << std::endl;
+			<< "  vault close --vault=/path/to/vault --extension=.vlt" << std::endl;
 }
 
 void Application::print_version()
