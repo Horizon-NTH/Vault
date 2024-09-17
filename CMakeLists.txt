@@ -1,11 +1,20 @@
 cmake_minimum_required(VERSION 3.12)
 
+if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan_provider.cmake")
+	message(STATUS "Downloading conan_provider.cmake from Conan repository")
+	file(DOWNLOAD
+		"https://raw.githubusercontent.com/conan-io/cmake-conan/develop2/conan_provider.cmake"
+		${CMAKE_BINARY_DIR}/conan_provider.cmake)
+endif ()
+
+set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
+
 project(vault VERSION 0.1)
 
+set(CMAKE_CXX_STANDARD 20)
 option(ENABLE_TESTS "Enable testing" OFF)
 
 set(HEADER_FILES
-	include/Base64.h
 	include/Node.h
 	include/File.h
 	include/Directory.h
@@ -17,7 +26,6 @@ set(HEADER_FILES
 )
 
 set(SOURCE_FILES
-	src/Base64.cpp
 	src/Node.cpp
 	src/File.cpp
 	src/Directory.cpp
@@ -28,19 +36,21 @@ set(SOURCE_FILES
 	src/XMLNode.cpp
 )
 
+find_package(Botan 3.4.0 REQUIRED)
+
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
-include_directories(include)
 
 add_library(${PROJECT_LIB} STATIC ${HEADER_FILES} ${SOURCE_FILES})
 
 target_include_directories(${PROJECT_LIB} PUBLIC include)
 target_compile_features(${PROJECT_LIB} PUBLIC cxx_std_20)
 target_compile_definitions(${PROJECT_LIB} PUBLIC PROJECT_VERSION="${PROJECT_VERSION}")
+target_link_libraries(${PROJECT_LIB} botan::botan)
 
 add_executable(${PROJECT_NAME} src/Main.cpp)
 
-target_link_libraries(${PROJECT_NAME} ${PROJECT_LIB})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_LIB} botan::botan)
 
 if (ENABLE_TESTS)
 	add_subdirectory(tests)

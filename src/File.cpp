@@ -1,5 +1,5 @@
 #include "File.h"
-#include "Base64.h"
+#include <botan/base64.h>
 #include <fstream>
 
 File::File(std::unique_ptr<Status> status, std::string&& data):
@@ -46,8 +46,6 @@ void File::create(const std::filesystem::path& path) const
 	if (!file.is_open())
 		throw std::ios_base::failure("Failed to create the file: " + full_path.string());
 
-	const auto data = Base64::decode(m_data);
+	const auto data = Botan::base64_decode(m_data);
 	file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
-
-	file.close();
 }

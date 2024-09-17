@@ -41,6 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Conan
+        run: pip install conan
+
       - name: Set reusable strings
         id: strings
         shell: bash

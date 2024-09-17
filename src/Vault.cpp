@@ -1,11 +1,11 @@
 #include "Vault.h"
 #include "File.h"
-#include "Base64.h"
 #include "XMLParser.h"
 
 #include <stack>
 #include <fstream>
 #include <sstream>
+#include <botan/base64.h>
 
 Vault::Status::Status(const std::filesystem::path& name, bool opened, const std::optional<std::string>& extension):
 	Directory::Status(name),
@@ -70,7 +70,7 @@ void Vault::read_from_dir()
 		for (const auto& entry : std::filesystem::directory_iterator(dir_path))
 		{
 			if (entry.is_regular_file())
-				dir.get().children().push_back(std::make_unique<File>(std::make_unique<Directory::Status>(entry.path().filename()), Base64::encode(File::read(entry.path()))));
+				dir.get().children().push_back(std::make_unique<File>(std::make_unique<Directory::Status>(entry.path().filename()), Botan::base64_encode(File::read(entry.path()))));
 			else if (entry.is_directory())
 			{
 				auto directory = std::make_unique<Directory>(std::make_unique<Directory::Status>(entry.path().filename()));

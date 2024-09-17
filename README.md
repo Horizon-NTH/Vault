@@ -30,8 +30,9 @@ git clone https://github.com/Horizon-NTH/Vault.git
 
 ### Build
 
-Ensure you have [CMake](https://cmake.org/) installed.  
-Generate the build environment using CMake and build the application.
+Ensure you have [CMake](https://cmake.org/) and [Conan](https://conan.io/) are installed.  
+Generate the build environment using CMake, Conan will automatically install all the
+dependencies needed so you can build the application.
 
 > You can also enable the [_tests_](https://github.com/google/googletest) by setting the `ENABLE_TESTS` option to `ON`.
 
@@ -52,7 +53,7 @@ sudo make install
 You can now run the application with the following command:
 
 ```bash
-./vault <command> [options]
+vault <command> [options]
 ```
 
 ## Usage
