@@ -7,11 +7,11 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 		${CMAKE_BINARY_DIR}/conan_provider.cmake)
 endif ()
 
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 
 project(vault VERSION 0.1)
 
-set(CMAKE_CXX_STANDARD 20)
 option(ENABLE_TESTS "Enable testing" OFF)
 
 set(HEADER_FILES
@@ -23,6 +23,7 @@ set(HEADER_FILES
 	include/Application.h
 	include/XMLParser.h
 	include/XMLNode.h
+	include/EncryptionManager.h
 )
 
 set(SOURCE_FILES
@@ -34,9 +35,10 @@ set(SOURCE_FILES
 	src/Application.cpp
 	src/XMLParser.cpp
 	src/XMLNode.cpp
+	src/EncryptionManager.cpp
 )
 
-find_package(Botan 3.4.0 REQUIRED)
+find_package(Botan 3.5.0 REQUIRED)
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 
