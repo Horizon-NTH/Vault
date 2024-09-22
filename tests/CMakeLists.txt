@@ -1,7 +1,7 @@
 enable_testing()
 
 set(gtest_force_shared_crt ON)
-find_package(gtest 1.15.0 REQUIRED)
+find_package(Gtest 1.15.0 REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 

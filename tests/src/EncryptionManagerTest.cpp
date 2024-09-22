@@ -26,22 +26,22 @@ protected:
 
 TEST_F(EncryptionManagerTest, EncryptionDecryption)
 {
-    auto data = generate_random_data(1024);
-    auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), password, salt);
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
 
     EXPECT_NE(encrypted_data, data);
 
-    auto [decrypted_data, nonce_decrypt] = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
+    const auto decrypted_data = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
 
     EXPECT_EQ(decrypted_data, data);
 }
 
 TEST_F(EncryptionManagerTest, DifferentNonces)
 {
-    auto data = generate_random_data(1024);
+    const auto data = generate_random_data(1024);
 
-    auto [encrypted_data1, nonce1] = EncryptionManager::encrypt(std::move(data), password, salt);
-    auto [encrypted_data2, nonce2] = EncryptionManager::encrypt(std::move(data), password, salt);
+    auto [encrypted_data1, nonce1] = EncryptionManager::encrypt(data, password, salt);
+    auto [encrypted_data2, nonce2] = EncryptionManager::encrypt(data, password, salt);
 
     EXPECT_NE(encrypted_data1, encrypted_data2) << "The encryption of a same data with same password and salt should produce different encrypted data";
     EXPECT_NE(nonce1, nonce2) << "Encryption should produce a different nonce each time.";
@@ -49,31 +49,77 @@ TEST_F(EncryptionManagerTest, DifferentNonces)
 
 TEST_F(EncryptionManagerTest, WrongPasswordDecryption)
 {
-    auto data = generate_random_data(1024);
-    auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), password, salt);
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
 
     const std::string wrong_password = "wrong-password";
-    auto [decrypted_data, nonce_decrypt] = EncryptionManager::decrypt(std::move(encrypted_data), wrong_password, salt, nonce);
-
-    EXPECT_NE(decrypted_data, data);
+    EXPECT_THROW({
+        auto _ = EncryptionManager::decrypt(std::move(encrypted_data), wrong_password, salt, nonce);
+        }, Botan::Invalid_Authentication_Tag) << "Decrypting with the wrong password should throw an exception";
 }
 
 TEST_F(EncryptionManagerTest, WrongSaltDecryption)
 {
-    auto data = generate_random_data(1024);
-    auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), password, salt);
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
 
-    auto [decrypted_data, nonce_decrypt] = EncryptionManager::decrypt(std::move(encrypted_data), password, EncryptionManager::generate_new_salt(), nonce);
-
-    EXPECT_NE(decrypted_data, data);
+    EXPECT_THROW({
+        auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, EncryptionManager::generate_new_salt(), nonce);
+        }, Botan::Invalid_Authentication_Tag) << "Decrypting with the wrong salt should throw an exception";
 }
 
-TEST_F(EncryptionManagerTest, WrongNonceDecryption)
+TEST_F(EncryptionManagerTest, ModifiedCiphertextFailsDecryption)
 {
-    auto data = generate_random_data(1024);
-    auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), password, salt);
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
 
-    auto [decrypted_data, nonce_decrypt] = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, {});
+    encrypted_data[0] ^= 0xFF;  // Flips the first byte
 
-    EXPECT_NE(decrypted_data, data);
+    EXPECT_THROW({
+        auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
+        }, Botan::Invalid_Authentication_Tag) << "Decrypting modified ciphertext should throw an exception.";
+}
+
+TEST_F(EncryptionManagerTest, ModifiedNonceFailsDecryption)
+{
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
+
+    EncryptionManager::Nonce modified_nonce = nonce;
+    modified_nonce[0] ^= 0xFF;
+
+    EXPECT_THROW({
+        auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, modified_nonce);
+        }, Botan::Invalid_Authentication_Tag) << "Decrypting with a modified nonce should throw an exception.";
+}
+
+TEST_F(EncryptionManagerTest, EmptyData)
+{
+    const std::vector<std::uint8_t> empty_data;
+    EXPECT_NO_THROW({
+        const auto encrypted = EncryptionManager::encrypt(empty_data, password, salt);
+        const auto uncrypted = EncryptionManager::decrypt(encrypted.first, password, salt, encrypted.second);
+        }) << "Encrypting empty data should not throw exception";
+}
+
+TEST_F(EncryptionManagerTest, CiphertextTooShortFailsDecryption)
+{
+    const auto data = generate_random_data(1024);
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
+
+    encrypted_data.resize(encrypted_data.size() / 2);
+
+    EXPECT_THROW({
+        auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
+        }, Botan::Invalid_Authentication_Tag) << "Decrypting an incomplete ciphertext should throw an exception.";
+}
+
+TEST_F(EncryptionManagerTest, NonRandomDataEncryptionDecryption)
+{
+    const std::vector<std::uint8_t> known_data = {'T', 'e', 's', 't', ' ', 'd', 'a', 't', 'a'};
+    auto [encrypted_data, nonce] = EncryptionManager::encrypt(known_data, password, salt);
+
+    const auto decrypted_data = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
+
+    EXPECT_EQ(decrypted_data, known_data) << "Decrypted known data should match original.";
 }
