@@ -19,5 +19,5 @@ public:
 	[[nodiscard]] static Salt generate_new_salt();
 
 private:
-	static [[nodiscard]] Key derive_key(const std::string& password, const Salt&);
+	[[nodiscard]] static Key derive_key(const std::string& password, const Salt&);
 };

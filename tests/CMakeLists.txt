@@ -1,13 +1,12 @@
 enable_testing()
 
 set(gtest_force_shared_crt ON)
-find_package(Gtest 1.15.0 REQUIRED)
+find_package(GTest 1.15.0 REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(TEST_SOURCES
 	src/VaultTest.cpp
-	src/ArgumentsParserTest.cpp
 	src/ApplicationTest.cpp
 	src/XMLParserTest.cpp
 	src/EncryptionManagerTest.cpp

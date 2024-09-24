@@ -7,7 +7,7 @@
 #include <sstream>
 #include <botan/base64.h>
 
-Vault::Status::Status(const std::filesystem::path& name, bool opened, const std::optional<std::string>& extension):
+Vault::Status::Status(const std::filesystem::path& name, const bool opened, const std::optional<std::string>& extension):
 	Directory::Status(name),
 	opened(opened),
 	extension(extension)
