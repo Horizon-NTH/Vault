@@ -1,22 +1,23 @@
 #pragma once
 
-#include <functional>
 #include <span>
 #include <CLI/CLI.hpp>
+#include "VaultManager.h"
 
 class Application
 {
 public:
-	explicit Application(const std::span<const char*>& args);
+	explicit Application(const std::span<const char*>& args, std::unique_ptr<VaultManager> vaultManager = std::make_unique<VaultManager>());
+	Application(const Application&) = delete;
+	Application(Application&&) = delete;
 
 	int execute();
 
 private:
 	CLI::App m_parser;
+	std::unique_ptr<VaultManager> m_vaultManager;
 	std::span<const char*> m_args;
 
-	mutable std::function<void()> m_command;
-
-	void parse_args();
+	void set_args_parsing();
 	static void print_version();
 };

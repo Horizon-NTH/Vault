@@ -6,8 +6,10 @@
 class Vault final : public Directory
 {
 public:
-	static void open(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination = std::nullopt);
-	static void close(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination = std::nullopt, const std::optional<std::string>& extension = std::nullopt);
+	explicit Vault(const std::filesystem::path& file, const std::optional<std::string>& extension = std::nullopt);
+
+	void open(const std::optional<std::filesystem::path>& destination = std::nullopt);
+	void close(const std::optional<std::filesystem::path>& destination = std::nullopt);
 
 private:
 	struct Status final : Directory::Status
@@ -21,12 +23,10 @@ private:
 
 	std::filesystem::directory_entry m_file;
 
-	explicit Vault(const std::filesystem::directory_entry& file, const std::optional<std::string>& extension = std::nullopt);
-
 	void read_from_dir();
-	void write_to_dir() const;
+	void write_to_dir();
 	void read_from_file();
-	void write_to_file() const;
+	void write_to_file();
 	void remove() const;
 	void extract_from_xml(std::string&& content);
 

@@ -8,6 +8,7 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 endif ()
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CONAN_BUILD_PROFILE "default;auto-cmake")
 set(CONAN_HOST_PROFILE "default;auto-cmake")
 if (NOT CMAKE_BUILD_TYPE)
@@ -28,6 +29,7 @@ set(HEADER_FILES
 	include/XMLParser.h
 	include/XMLNode.h
 	include/EncryptionManager.h
+	include/VaultManager.h
 )
 
 set(SOURCE_FILES
@@ -39,6 +41,7 @@ set(SOURCE_FILES
 	src/XMLParser.cpp
 	src/XMLNode.cpp
 	src/EncryptionManager.cpp
+	src/VaultManager.cpp
 )
 
 find_package(Botan 3.5.0 REQUIRED)

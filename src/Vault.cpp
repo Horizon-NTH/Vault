@@ -14,44 +14,42 @@ Vault::Status::Status(const std::filesystem::path& name, const bool opened, cons
 {
 }
 
-Vault::Vault(const std::filesystem::directory_entry& file, const std::optional<std::string>& extension):
+Vault::Vault(const std::filesystem::path& file, const std::optional<std::string>& extension):
 	Directory(nullptr),
 	m_file(file)
 {
 	if (!m_file.exists())
-		throw std::runtime_error(file.path().string() + " does not exist");
+		throw std::runtime_error(file.string() + " does not exist");
 	if (!m_file.is_regular_file() && !m_file.is_directory())
-		throw std::invalid_argument(file.path().string() + " is not a file or directory");
+		throw std::invalid_argument(file.string() + " is not a file or directory");
 	if (m_file.is_regular_file())
-	{
 		m_status = std::make_unique<Status>(m_file.path().stem(), false, extension);
-		read_from_file();
-	}
 	else
-	{
 		m_status = std::make_unique<Status>(m_file.path().filename(), true, extension);
-		read_from_dir();
-	}
 }
 
-void Vault::open(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination)
+void Vault::open(const std::optional<std::filesystem::path>& destination)
 {
-	auto vault = Vault(std::filesystem::directory_entry(path));
-	if (const auto status = dynamic_cast<Status*>(vault.status().get()); !status || status->opened)
-		throw std::invalid_argument("You can't open a vault that is already opened");
-	vault.remove();
-	vault.m_file = std::filesystem::directory_entry(destination.value_or(path.parent_path()) / vault.m_status->name);
-	vault.write_to_dir();
+	const auto status = dynamic_cast<Status*>(m_status.get());
+	if (!status || status->opened)
+		throw std::runtime_error("You can't open a vault that is already opened");
+	read_from_file();
+	remove();
+	m_file = std::filesystem::directory_entry(destination.value_or(m_file.path().parent_path()) / m_status->name);
+	write_to_dir();
+	status->opened = true;
 }
 
-void Vault::close(const std::filesystem::path& path, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension)
+void Vault::close(const std::optional<std::filesystem::path>& destination)
 {
-	auto vault = Vault(std::filesystem::directory_entry(path), extension);
-	if (const auto status = dynamic_cast<Status*>(vault.status().get()); !status || !status->opened)
+	const auto status = dynamic_cast<Status*>(m_status.get());
+	if (!status || !status->opened)
 		throw std::invalid_argument("You can't close a vault that is already closed");
-	vault.remove();
-	vault.m_file = std::filesystem::directory_entry(destination.value_or(path.parent_path()) / vault.m_status->name);
-	vault.write_to_file();
+	read_from_dir();
+	remove();
+	m_file = std::filesystem::directory_entry(destination.value_or(m_file.path().parent_path()) / m_status->name);
+	write_to_file();
+	status->opened = false;
 }
 
 void Vault::read_from_dir()
@@ -83,14 +81,15 @@ void Vault::read_from_dir()
 	}
 }
 
-void Vault::write_to_dir() const
+void Vault::write_to_dir()
 {
-	auto vault_path = std::filesystem::path(m_file.path()).replace_extension();
+	const auto vault_path = std::filesystem::path(m_file.path()).replace_extension();
 
 	if (exists(vault_path))
 		throw std::runtime_error(m_file.path().string() + " already exists");
 
-	create(vault_path.remove_filename());
+	create(vault_path.parent_path());
+	m_file.assign(vault_path);
 }
 
 void Vault::read_from_file()
@@ -112,7 +111,7 @@ void Vault::read_from_file()
 	extract_from_xml(std::move(content));
 }
 
-void Vault::write_to_file() const
+void Vault::write_to_file()
 {
 	const auto status = dynamic_cast<Status*>(m_status.get());
 	const auto vault_path = std::filesystem::path(m_file.path()).replace_extension(status ? status->extension.value_or(".vlt") : ".vlt");
@@ -125,7 +124,7 @@ void Vault::write_to_file() const
 		throw std::ios_base::failure("Failed to open the file: " + vault_path.string());
 
 	write_content(vault_file, 0);
-	vault_file.close();
+	m_file.assign(vault_path);
 }
 
 void Vault::remove() const

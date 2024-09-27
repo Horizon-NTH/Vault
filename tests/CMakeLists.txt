@@ -15,7 +15,7 @@ set(TEST_SOURCES
 add_executable(runTests ${TEST_SOURCES})
 
 target_compile_features(runTests PUBLIC cxx_std_20)
-target_link_libraries(runTests GTest::gtest GTest::gtest_main ${PROJECT_LIB})
+target_link_libraries(runTests GTest::gtest GTest::gmock GTest::gmock_main ${PROJECT_LIB})
 
 include(GoogleTest)
 gtest_discover_tests(runTests)

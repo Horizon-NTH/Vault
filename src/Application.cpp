@@ -1,17 +1,12 @@
 #include "Application.h"
-
-#include <iostream>
-
 #include "Vault.h"
 
-#include <stdexcept>
-#include <string>
-
-Application::Application(const std::span<const char*>& args):
+Application::Application(const std::span<const char*>& args, std::unique_ptr<VaultManager> vaultManager):
 	m_parser("A small, portable file system with encryption capabilities.", "vault"),
+	m_vaultManager(std::move(vaultManager)),
 	m_args(args)
 {
-	parse_args();
+	set_args_parsing();
 }
 
 int Application::execute()
@@ -36,7 +31,7 @@ int Application::execute()
 	return EXIT_SUCCESS;
 }
 
-void Application::parse_args()
+void Application::set_args_parsing()
 {
 	m_parser.require_subcommand(0, 1)
 #if defined(WIN32)
@@ -54,28 +49,28 @@ void Application::parse_args()
 	        ->silent()
 	        ->parse_complete_callback([] { throw CLI::CallForVersion(); });
 
-	std::filesystem::path vault;
-	std::optional<std::filesystem::path> destination;
+	const auto vaultPath = std::make_shared<std::filesystem::path>();
+	const auto destination = std::make_shared<std::optional<std::filesystem::path>>();
 
 	const auto open = m_parser.add_subcommand("open", "Open a vault");
-	open->add_option("vault, -v, --vault", vault, "Path to the vault file")
+	open->add_option("vault, -v, --vault", *vaultPath, "Path to the vault file")
 	    ->required()
 	    ->check(CLI::ExistingFile);
-	open->add_option("destination, -d, --destination", destination, "Path to the destination directory")
+	open->add_option("destination, -d, --destination", *destination, "Path to the destination directory")
 	    ->check(CLI::ExistingDirectory);
-	open->callback([&] { Vault::open(vault, destination); });
+	open->callback([=] { m_vaultManager->open_vault(*vaultPath, *destination); });
 
 	const auto close = m_parser.add_subcommand("close", "Close a vault");
-	close->add_option("vault, -v, --vault", vault, "Path to the vault file")
+	close->add_option("vault, -v, --vault", *vaultPath, "Path to the vault file")
 	     ->required()
 	     ->check(CLI::ExistingDirectory);
-	close->add_option("destination, -d, --destination", destination, "Path to the destination directory")
+	close->add_option("destination, -d, --destination", *destination, "Path to the destination directory")
 	     ->check(CLI::ExistingDirectory);
-	// TODO: Remove the extension option and implement the functionality
-	std::string extension;
-	close->add_option("extension, -e, --extension", extension, "Extension of the files to close")
+	// TODO: Remove the extension option and implement the settings file
+	const auto extension = std::make_shared<std::optional<std::string>>();
+	close->add_option("extension, -e, --extension", *extension, "Extension of the files to close")
 	     ->check(CLI::ExistingDirectory);
-	close->callback([&] { Vault::close(vault, destination, extension); });
+	close->callback([=] { m_vaultManager->close_vault(*vaultPath, *destination, *extension); });
 }
 
 void Application::print_version()

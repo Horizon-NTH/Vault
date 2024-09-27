@@ -26,9 +26,9 @@ void Directory::write_content(std::ostream& os, const size_t indentation) const
 	os << indentation_str << "</directory>" << std::endl;
 }
 
-void Directory::create(const std::filesystem::path& path) const
+void Directory::create(const std::filesystem::path& parentPath) const
 {
-	const auto directory_path = path / m_status->name;
+	const auto directory_path = parentPath / m_status->name;
 	create_directory(directory_path);
 	for (const auto& child : m_children)
 	{
