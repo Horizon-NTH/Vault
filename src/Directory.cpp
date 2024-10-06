@@ -1,7 +1,7 @@
 #include "Directory.h"
 
-Directory::Directory(std::unique_ptr<Status> status):
-	Node(std::move(status))
+Directory::Directory(std::filesystem::path name):
+	Node(std::move(name))
 {
 }
 
@@ -18,7 +18,7 @@ const std::vector<std::unique_ptr<Node>>& Directory::children() const
 void Directory::write_content(std::ostream& os, const size_t indentation) const
 {
 	const std::string indentation_str(indentation, '\t');
-	os << indentation_str << "<directory name=" << status()->name << ">" << std::endl;
+	os << indentation_str << "<directory name=\"" << m_name.string() << "\">" << std::endl;
 	for (const auto& child : m_children)
 	{
 		child->write_content(os, indentation + 1);
@@ -26,9 +26,9 @@ void Directory::write_content(std::ostream& os, const size_t indentation) const
 	os << indentation_str << "</directory>" << std::endl;
 }
 
-void Directory::create(const std::filesystem::path& path) const
+void Directory::create(const std::filesystem::path& parentPath) const
 {
-	const auto directory_path = path / m_status->name;
+	const auto directory_path = parentPath / m_name;
 	create_directory(directory_path);
 	for (const auto& child : m_children)
 	{

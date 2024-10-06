@@ -41,6 +41,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup GCC
+        if: matrix.os == 'ubuntu-latest' && matrix.c_compiler == 'gcc'
+        uses: Dup4/actions-setup-gcc@v1
+        with:
+          version: latest
+
+      - name: Install Conan
+        run: pip install conan
+
       - name: Set reusable strings
         id: strings
         shell: bash

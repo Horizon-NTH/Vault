@@ -2,7 +2,7 @@
 
 #include <map>
 #include <memory>
-#include <string_view>
+#include <string>
 #include <vector>
 
 class XMLNode
