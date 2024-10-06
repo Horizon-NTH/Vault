@@ -16,7 +16,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 
-project(vault VERSION 0.2)
+project(vault VERSION 1.0)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 
@@ -46,7 +46,8 @@ set(SOURCE_FILES
 
 find_package(Botan 3.5.0 REQUIRED)
 find_package(CLI11 2.4.2 REQUIRED)
-set(DEPS CLI11::CLI11 botan::botan)
+find_package(yaml-cpp 0.8.0 REQUIRED)
+set(DEPS CLI11::CLI11 botan::botan yaml-cpp::yaml-cpp)
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 

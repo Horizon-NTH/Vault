@@ -6,7 +6,7 @@
 class Directory : public Node
 {
 public:
-	explicit Directory(std::unique_ptr<Status> status);
+	explicit Directory(std::filesystem::path name);
 
 	[[nodiscard]] std::vector<std::unique_ptr<Node>>& children();
 	[[nodiscard]] const std::vector<std::unique_ptr<Node>>& children() const;

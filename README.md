@@ -1,6 +1,6 @@
 # Vault
 
-[![Release](https://img.shields.io/badge/Release-v0.1-blueviolet)](https://github.com/Horizon-NTH/Vault/releases)
+[![Release](https://img.shields.io/badge/Release-v1.0-blueviolet)](https://github.com/Horizon-NTH/Vault/releases)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B-0052cf)](https://en.wikipedia.org/wiki/C++)
 [![Licence](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -13,8 +13,8 @@ A small, portable file system with encryption capabilities.
 - **Vault Creation** : Create a vault to store files securely.
 - **Vault Opening** : Open an existing vault to access its contents.
 - **Vault Closing** : Close a vault and save its contents to a single file.
-- **Vault Encryption _[Coming Soon]_** : Encrypt and decrypt files stored in a vault with a password.
-- **Vault Compression _[Coming Soon]_** : Compress and decompress files stored in a vault.
+- **Vault Encryption** _[Coming Soon]_ : Encrypt and decrypt files stored in a vault with a password.
+- **Vault Compression** _[Coming Soon]_ : Compress and decompress files stored in a vault.
 
 ## Installation
 
@@ -58,48 +58,57 @@ vault <command> [options]
 
 ## Usage
 
-### Commands
-
-- `open` : Open a vault to access its contents.
-- `close` : Close a vault and save its contents to a single file.
-
-### Options
-
-#### Command `open`
-
-- `-v, --vault <path>` : Path to the vault (required).
-- `-d, --destination <path>` : Destination path for the output (optional).
-
-Exemple :
+To have a list of all available commands, you can use the `--help` option.
 
 ```bash
-./vault open -v /path/to/vault -d /output/path
+vault [help | --help | -h]
 ```
 
-#### Command `close`
+### Create a Vault
 
-- `-v, --vault <path>` : Path to the vault (required).
-- `-d, --destination <path>` : Destination path for the output (optional).
-- `-e, --extension <ext>` : Extension of the output file (optional).
-
-Exemple :
+To create a new empty vault, you can use the `create` command.
 
 ```bash
-./vault close --vault=/path/to/vault --destination=/output/path --extension=.vlt
+vault create <vault_name>
 ```
 
-### Special Commands
-
-To display **help** information, use one the following commands:
+By default, the vault will be created in the current directory. You can specify a destination path.
 
 ```bash
-./vault [ --help | -h ]
+vault create <vault_name> --destination <path>
 ```
 
-To display the **version** of the application, use one the following commands:
+You can also choose a source directory so that the vault is created with the files in it.
 
 ```bash
-./vault [ --version | -v ]
+vault create <vault_name> --from <path>
+```
+
+This will create a new vault, and move all the files from the source directory to the vault.
+
+You also have the option to specify the extension of the closed vault file.
+
+```bash
+vault create <vault_name> --extension <ext>
+```
+
+> To use the next commands, you need to have a valid vault created with one of the previous commands.
+
+### Close a Vault
+
+To close a vault and save its contents to a single file, you can use the `close` command.
+You can also specify the path where the vault will be saved.
+
+```bash
+vault close <vault_name> [--destination <path>]
+```
+
+### Open a Vault
+
+To open an existing vault, you can use the `open` command. You can also specify the path where the vault will be opened.
+
+```bash
+vault open <vault_name> [--destination <path>]
 ```
 
 ## License

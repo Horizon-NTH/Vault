@@ -1,10 +1,11 @@
 #include "File.h"
 #include <botan/base64.h>
 #include <fstream>
+#include <utility>
 
-File::File(std::unique_ptr<Status> status, std::string&& data):
-	Node(std::move(status)),
-	m_data(data)
+File::File(std::filesystem::path name, std::string&& data):
+	Node(std::move(name)),
+	m_data(std::move(data))
 {
 }
 
@@ -36,12 +37,12 @@ std::vector<uint8_t> File::read(const std::filesystem::path& path)
 
 void File::write_content(std::ostream& os, const size_t indentation) const
 {
-	os << std::string(indentation, '\t') << "<file name=" << m_status->name << " data=\"" << data() << "\"/>" << std::endl;
+	os << std::string(indentation, '\t') << "<file name=\"" << m_name.string() << "\" data=\"" << data() << "\"/>" << std::endl;
 }
 
-void File::create(const std::filesystem::path& path) const
+void File::create(const std::filesystem::path& parentPath) const
 {
-	const auto full_path = path / m_status->name;
+	const auto full_path = parentPath / m_name;
 	std::ofstream file(full_path.string(), std::ios::binary);
 	if (!file.is_open())
 		throw std::ios_base::failure("Failed to create the file: " + full_path.string());

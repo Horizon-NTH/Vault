@@ -16,6 +16,23 @@ protected:
         file.close();
     }
 
+    [[nodiscard]] static int number_of_files(const std::filesystem::path& path)
+    {
+        int count = 0;
+        for (const auto& entry : std::filesystem::directory_iterator(path))
+        {
+            if (entry.is_regular_file())
+            {
+                count++;
+            }
+            else if (entry.is_directory())
+            {
+                count += number_of_files(entry);
+            }
+        }
+        return count;
+    }
+
     [[nodiscard]] std::string read_file(const std::string& name) const
     {
         const std::ifstream file((m_temp_dir / name).string());
@@ -35,6 +52,7 @@ protected:
         create_directory(m_temp_dir / "test_vault/inner");
         create_directory(m_temp_dir / "test_vault/inner/inner");
 
+        write_file("test_vault/.vlt", "name: test_vault\nextension: .vlt");
         write_file("test_vault/inner/inner/file.txt", "Content of file.txt");
         write_file("test_vault/inner/inner/file2.txt", "Content of file2.txt");
         write_file("test_vault/inner/file.txt", "Content of inner/file.txt");
@@ -64,6 +82,49 @@ protected:
     }
 };
 
+TEST_F(VaultTest, Create)
+{
+    Vault vault("test_vault", std::nullopt, m_temp_dir);
+
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_TRUE(exists("test_vault/.vlt"));
+    EXPECT_EQ(number_of_files(m_temp_dir / "test_vault"), 1);
+    EXPECT_EQ(read_file("test_vault/.vlt"), "name: test_vault\nextension: .vlt");
+}
+
+TEST_F(VaultTest, CreateWithSpecifiedExtension)
+{
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "vault");
+
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_TRUE(exists("test_vault/.vlt"));
+    EXPECT_EQ(number_of_files(m_temp_dir / "test_vault"), 1);
+    EXPECT_EQ(read_file("test_vault/.vlt"), "name: test_vault\nextension: .vault");
+}
+
+TEST_F(VaultTest, CreateWithEmptyExtension)
+{
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "");
+
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_TRUE(exists("test_vault/.vlt"));
+    EXPECT_EQ(number_of_files(m_temp_dir / "test_vault"), 1);
+    EXPECT_EQ(read_file("test_vault/.vlt"), "name: test_vault\nextension: \"\"");
+}
+
+TEST_F(VaultTest, CreateWithSourceDirectory)
+{
+    create_directory(m_temp_dir / "test_source");
+    write_file("test_source/file.txt", "Content of file.txt");
+
+    Vault vault("test_vault", std::filesystem::directory_entry(m_temp_dir / "test_source"), m_temp_dir);
+
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_FALSE(exists("test_source"));
+    EXPECT_TRUE(exists("test_vault/file.txt"));
+    EXPECT_EQ(read_file("test_vault/file.txt"), "Content of file.txt");
+}
+
 TEST_F(VaultTest, Close)
 {
     create_test_vault_directory();
@@ -74,7 +135,7 @@ TEST_F(VaultTest, Close)
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
 
-    // TODO Find a way to test the content of the file
+    // TODO: Find a way to test the content of the file
     // #if defined(_WIN32)
     //     EXPECT_EQ(read_file("test_vault.vlt"), std::string("<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n"));
     // #elif defined(__APPLE) || defined(__MACH__)
@@ -86,19 +147,37 @@ TEST_F(VaultTest, Close)
 
 TEST_F(VaultTest, CloseEmptyVault)
 {
-    create_directory(m_temp_dir / "test_vault");
-
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::nullopt, m_temp_dir);
     vault.close();
 
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
-    EXPECT_EQ(read_file("test_vault.vlt"), "<vault name=\"test_vault\">\n</vault>\n");
+    EXPECT_EQ(read_file("test_vault.vlt"), "<vault name=\"test_vault\" extension=\".vlt\">\n</vault>\n");
+}
+
+TEST_F(VaultTest, CloseKeepCustomExtension)
+{
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "vault");
+    vault.close();
+
+    EXPECT_FALSE(exists("test_vault"));
+    EXPECT_FALSE(exists("test_vault.vlt"));
+    EXPECT_TRUE(exists("test_vault.vault"));
+}
+
+TEST_F(VaultTest, CloseKeepEmptyExtension)
+{
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "");
+    vault.close();
+
+    EXPECT_FALSE(exists("test_vault.vlt"));
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_TRUE(std::filesystem::is_regular_file(m_temp_dir / "test_vault"));
 }
 
 TEST_F(VaultTest, Open)
 {
-    write_file("test_vault.vlt", "<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n");
+    write_file("test_vault.vlt", "<vault name=\"test_vault\" extension=\".vlt\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n");
 
     Vault vault(m_temp_dir / "test_vault.vlt");
     vault.open();
@@ -107,6 +186,7 @@ TEST_F(VaultTest, Open)
     EXPECT_FALSE(exists("test_vault.vlt"));
 
     EXPECT_TRUE(exists("test_vault"));
+    EXPECT_TRUE(exists("test_vault/.vlt"));
     EXPECT_TRUE(exists("test_vault/inner"));
     EXPECT_TRUE(exists("test_vault/inner/inner"));
     EXPECT_TRUE(exists("test_vault/inner/inner/file.txt"));
@@ -116,24 +196,26 @@ TEST_F(VaultTest, Open)
     EXPECT_TRUE(exists("test_vault/file.txt"));
     EXPECT_TRUE(exists("test_vault/file2.txt"));
 
-    EXPECT_EQ(read_file("test_vault/inner/inner/file.txt"), read_file("test_vault/inner/inner/file.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/inner/file2.txt"), read_file("test_vault/inner/inner/file2.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/file.txt"), read_file("test_vault/inner/file.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/file2.txt"), read_file("test_vault/inner/file2.txt"));
-    EXPECT_EQ(read_file("test_vault/file.txt"), read_file("test_vault/file.txt"));
-    EXPECT_EQ(read_file("test_vault/file2.txt"), read_file("test_vault/file2.txt"));
+    EXPECT_EQ(read_file("test_vault/.vlt"), "name: test_vault\nextension: .vlt");
+    EXPECT_EQ(read_file("test_vault/inner/inner/file.txt"), "Content of file.txt");
+    EXPECT_EQ(read_file("test_vault/inner/inner/file2.txt"), "Content of file2.txt");
+    EXPECT_EQ(read_file("test_vault/inner/file.txt"), "Content of inner/file.txt");
+    EXPECT_EQ(read_file("test_vault/inner/file2.txt"), "Content of inner/file2.txt");
+    EXPECT_EQ(read_file("test_vault/file.txt"), "Content of test_vault/file.txt");
+    EXPECT_EQ(read_file("test_vault/file2.txt"), "Content of test_vault/file2.txt");
 }
 
 TEST_F(VaultTest, OpenEmptyVault)
 {
-    write_file("test_vault.vlt", "<vault name=\"test_vault\">\n</vault>\n");
+    write_file("test_vault.vlt", "<vault name=\"test_vault\" extension=\".vlt\">\n</vault>\n");
 
     Vault vault(m_temp_dir / "test_vault.vlt");
     vault.open();
 
     EXPECT_TRUE(exists("test_vault"));
     EXPECT_FALSE(exists("test_vault.vlt"));
-    EXPECT_TRUE(std::filesystem::is_empty(m_temp_dir / "test_vault"));
+    EXPECT_EQ(number_of_files(m_temp_dir / "test_vault"), 1);
+    EXPECT_TRUE(exists("test_vault/.vlt"));
 }
 
 TEST_F(VaultTest, OpenCloseNonExistent)
@@ -167,13 +249,13 @@ TEST_F(VaultTest, OpenClose)
 
 TEST_F(VaultTest, OpenCloseEmptyVault)
 {
-    create_directory(m_temp_dir / "test_vault");
-
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::nullopt, m_temp_dir);
     vault.close();
     vault.open();
 
-    EXPECT_TRUE(std::filesystem::is_empty(m_temp_dir / "test_vault"));
+    EXPECT_TRUE(exists("test_vault"));
+    EXPECT_FALSE(exists("test_vault.vlt"));
+    EXPECT_EQ(number_of_files(m_temp_dir / "test_vault"), 1);
 }
 
 TEST_F(VaultTest, OpenCloseEmptyFile)
@@ -181,7 +263,7 @@ TEST_F(VaultTest, OpenCloseEmptyFile)
     create_directory(m_temp_dir / "test_vault");
     write_file("test_vault/empty_file.txt", "");
 
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::filesystem::directory_entry(m_temp_dir / "test_vault"), m_temp_dir);
     vault.close();
     vault.open();
 
@@ -231,7 +313,7 @@ TEST_F(VaultTest, OpenCloseBinaryFile)
     binary_file.write(reinterpret_cast<const char*>(binary_data.data()), static_cast<std::streamsize>(binary_data.size()));
     binary_file.close();
 
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::filesystem::directory_entry(m_temp_dir / "test_vault"), m_temp_dir);
     vault.close();
     vault.open();
 
@@ -248,7 +330,7 @@ TEST_F(VaultTest, OpenCloseUnicodeFile)
     const std::string unicode_content = "你好，世界! Привет, мир! Hello, world!";
     write_file("test_vault/unicode_file.txt", unicode_content);
 
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::filesystem::directory_entry(m_temp_dir / "test_vault"), m_temp_dir);
     vault.close();
     vault.open();
 
@@ -261,7 +343,7 @@ TEST_F(VaultTest, OpenCloseFileWithSpecialCharacters)
     const std::string special_characters_content = "Special characters: !@#$%^&*()_+{}:\"<>?|";
     write_file("test_vault/special_characters_file.txt", special_characters_content);
 
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::filesystem::directory_entry(m_temp_dir / "test_vault"), m_temp_dir);
     vault.close();
     vault.open();
 
@@ -291,7 +373,7 @@ TEST_F(VaultTest, InvalidCloseVaultFile)
 
 TEST_F(VaultTest, IncorrectlyEncodedDataField)
 {
-    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="InvalidBase64Data@#%"/></vault>)");
+    write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad" extension=".vlt"><file name="fileExemple1.txt" data="InvalidBase64Data@#%"/></vault>)");
 
     EXPECT_THROW({
         Vault vault(m_temp_dir / "test_vault_bad.vlt");
@@ -301,9 +383,7 @@ TEST_F(VaultTest, IncorrectlyEncodedDataField)
 
 TEST_F(VaultTest, OpenCloseWithCustomExtension)
 {
-    create_directory(m_temp_dir / "test_vault");
-
-    Vault vault(m_temp_dir / "test_vault", ".vault");
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "vault");
     vault.close();
 
     EXPECT_TRUE(exists("test_vault.vault"));
@@ -317,9 +397,7 @@ TEST_F(VaultTest, OpenCloseWithCustomExtension)
 
 TEST_F(VaultTest, OpenCloseWithEmptyExtension)
 {
-    create_directory(m_temp_dir / "test_vault");
-
-    Vault vault(m_temp_dir / "test_vault", "");
+    Vault vault("test_vault", std::nullopt, m_temp_dir, "");
     vault.close();
 
     EXPECT_TRUE(exists("test_vault"));
@@ -364,10 +442,9 @@ TEST_F(VaultTest, InvalidCloseWithSymbolicDirectory)
 
 TEST_F(VaultTest, CloseWithSpecifiedDestination)
 {
-    create_directory(m_temp_dir / "test_vault");
     create_directory(m_temp_dir / "test_destination");
 
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::nullopt, m_temp_dir);
     vault.close(m_temp_dir / "test_destination");
 
     EXPECT_TRUE(exists("test_destination/test_vault.vlt"));
@@ -375,7 +452,7 @@ TEST_F(VaultTest, CloseWithSpecifiedDestination)
 
 TEST_F(VaultTest, OpenWithSpecifiedDestination)
 {
-    write_file("test_vault.vlt", "<vault name=\"test_vault\">\n</vault>\n");
+    write_file("test_vault.vlt", "<vault name=\"test_vault\" extension=\".vlt\">\n</vault>\n");
     create_directory(m_temp_dir / "test_destination");
 
     Vault vault(m_temp_dir / "test_vault.vlt");
@@ -386,9 +463,7 @@ TEST_F(VaultTest, OpenWithSpecifiedDestination)
 
 TEST_F(VaultTest, CloseWithEmptyDestination)
 {
-    create_directory(m_temp_dir / "test_vault");
-
-    Vault vault(m_temp_dir / "test_vault");
+    Vault vault("test_vault", std::nullopt, m_temp_dir);
     vault.close(m_temp_dir / "");
 
     EXPECT_TRUE(exists("test_vault.vlt"));
@@ -396,7 +471,7 @@ TEST_F(VaultTest, CloseWithEmptyDestination)
 
 TEST_F(VaultTest, OpenWithEmptyDestination)
 {
-    write_file("test_vault.vlt", "<vault name=\"test_vault\">\n</vault>\n");
+    write_file("test_vault.vlt", "<vault name=\"test_vault\" extension=\".vlt\">\n</vault>\n");
 
     Vault vault(m_temp_dir / "test_vault.vlt");
     vault.open(m_temp_dir / "");

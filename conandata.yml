@@ -2,3 +2,4 @@ requirements:
   - "botan/3.5.0"
   - "gtest/1.15.0"
   - "cli11/2.4.2"
+  - "yaml-cpp/0.8.0"
