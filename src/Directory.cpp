@@ -1,6 +1,6 @@
 #include "Directory.h"
 
-Directory::Directory(std::filesystem::path name):
+Directory::Directory(std::string name):
 	Node(std::move(name))
 {
 }
@@ -18,7 +18,7 @@ const std::vector<std::unique_ptr<Node>>& Directory::children() const
 void Directory::write_content(std::ostream& os, const size_t indentation) const
 {
 	const std::string indentation_str(indentation, '\t');
-	os << indentation_str << "<directory name=\"" << m_name.string() << "\">" << std::endl;
+	os << indentation_str << "<directory name=\"" << m_name << "\">" << std::endl;
 	for (const auto& child : m_children)
 	{
 		child->write_content(os, indentation + 1);

@@ -17,7 +17,6 @@ class XMLParser
 	static inline const auto m_tags = std::array{
 				existingTags{"vault"sv, existingAttributes{
 					             "name"sv,
-					             "extension"sv,
 				             },
 				             false},
 				existingTags{"file"sv, existingAttributes{

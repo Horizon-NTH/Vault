@@ -10,9 +10,8 @@ A small, portable file system with encryption capabilities.
 
 ## Features
 
-- **Vault Creation** : Create a vault to store files securely.
 - **Vault Opening** : Open an existing vault to access its contents.
-- **Vault Closing** : Close a vault and save its contents to a single file.
+- **Vault Closing** : Close a directory and save its contents to a single file.
 - **Vault Encryption** _[Coming Soon]_ : Encrypt and decrypt files stored in a vault with a password.
 - **Vault Compression** _[Coming Soon]_ : Compress and decompress files stored in a vault.
 
@@ -64,48 +63,19 @@ To have a list of all available commands, you can use the `--help` option.
 vault [help | --help | -h]
 ```
 
-### Create a Vault
-
-To create a new empty vault, you can use the `create` command.
-
-```bash
-vault create <vault_name>
-```
-
-By default, the vault will be created in the current directory. You can specify a destination path.
-
-```bash
-vault create <vault_name> --destination <path>
-```
-
-You can also choose a source directory so that the vault is created with the files in it.
-
-```bash
-vault create <vault_name> --from <path>
-```
-
-This will create a new vault, and move all the files from the source directory to the vault.
-
-You also have the option to specify the extension of the closed vault file.
-
-```bash
-vault create <vault_name> --extension <ext>
-```
-
-> To use the next commands, you need to have a valid vault created with one of the previous commands.
-
 ### Close a Vault
 
 To close a vault and save its contents to a single file, you can use the `close` command.
-You can also specify the path where the vault will be saved.
+You can also specify the path where the vault will be saved and the extension of the file.
 
 ```bash
-vault close <vault_name> [--destination <path>]
+vault close <vault_name> [--destination <path>] [--extension <ext>]
 ```
 
 ### Open a Vault
 
-To open an existing vault, you can use the `open` command. You can also specify the path where the vault will be opened.
+To open an existing vault file, you can use the `open` command. You can also specify the path where the vault will be
+opened.
 
 ```bash
 vault open <vault_name> [--destination <path>]

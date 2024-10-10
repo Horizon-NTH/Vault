@@ -46,8 +46,7 @@ set(SOURCE_FILES
 
 find_package(Botan 3.5.0 REQUIRED)
 find_package(CLI11 2.4.2 REQUIRED)
-find_package(yaml-cpp 0.8.0 REQUIRED)
-set(DEPS CLI11::CLI11 botan::botan yaml-cpp::yaml-cpp)
+set(DEPS CLI11::CLI11 botan::botan)
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 

@@ -6,7 +6,7 @@
 class File final : public Node
 {
 public:
-	File(std::filesystem::path name, std::string&& data);
+	File(std::string name, std::string&& data);
 
 	[[nodiscard]] const std::string& data() const;
 

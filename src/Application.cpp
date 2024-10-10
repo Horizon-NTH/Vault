@@ -50,20 +50,7 @@ void Application::set_args_parsing()
 	        ->parse_complete_callback([] { throw CLI::CallForVersion(); });
 
 	const auto destination = std::make_shared<std::optional<std::filesystem::path>>();
-	const auto name = std::make_shared<std::string>();
-	const auto from = std::make_shared<std::optional<std::filesystem::path>>();
 	const auto extension = std::make_shared<std::optional<std::string>>();
-
-	const auto create = m_parser.add_subcommand("create", "Create a vault");
-	create->add_option("name, -n, --name", *name, "Name of the vault")
-	      ->required();
-	create->add_option("-f, --from", *from, "Path to the a source directory that will be moved as the vault content")
-	      ->check(CLI::ExistingDirectory);
-	create->add_option("-d, --destination", *destination, "Path to the destination directory")
-	      ->check(CLI::ExistingDirectory);
-	create->add_option("-e, --extension", *extension, "Extension of the vault file");
-	create->callback([this, name, from, destination, extension] { m_vaultManager->create_vault(*name, from->has_value() ? std::filesystem::directory_entry(from->value()) : std::optional<std::filesystem::directory_entry>{}, *destination, *extension); });
-
 	const auto vaultPath = std::make_shared<std::filesystem::path>();
 
 	const auto open = m_parser.add_subcommand("open", "Open a vault");
@@ -80,7 +67,8 @@ void Application::set_args_parsing()
 	     ->check(CLI::ExistingDirectory);
 	close->add_option("destination, -d, --destination", *destination, "Path to the destination directory")
 	     ->check(CLI::ExistingDirectory);
-	close->callback([this, vaultPath, destination] { m_vaultManager->close_vault(*vaultPath, *destination); });
+	close->add_option("extension, -e, --extension", *extension, "Extension of the vault file");
+	close->callback([this, vaultPath, destination, extension] { m_vaultManager->close_vault(*vaultPath, *destination, *extension); });
 }
 
 void Application::print_version()
