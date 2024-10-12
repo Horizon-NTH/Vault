@@ -16,7 +16,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 
-project(vault VERSION 1.0)
+project(vault VERSION 2.0)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 

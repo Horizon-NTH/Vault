@@ -1,6 +1,6 @@
 # Vault
 
-[![Release](https://img.shields.io/badge/Release-v1.0-blueviolet)](https://github.com/Horizon-NTH/Vault/releases)
+[![Release](https://img.shields.io/badge/Release-v2.0-blueviolet)](https://github.com/Horizon-NTH/Vault/releases)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B-0052cf)](https://en.wikipedia.org/wiki/C++)
 [![Licence](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -12,7 +12,7 @@ A small, portable file system with encryption capabilities.
 
 - **Vault Opening** : Open an existing vault to access its contents.
 - **Vault Closing** : Close a directory and save its contents to a single file.
-- **Vault Encryption** _[Coming Soon]_ : Encrypt and decrypt files stored in a vault with a password.
+- **Vault Encryption** : Encrypt and decrypt the vault with a password.
 - **Vault Compression** _[Coming Soon]_ : Compress and decompress files stored in a vault.
 
 ## Installation
@@ -67,10 +67,14 @@ vault [help | --help | -h]
 
 To close a vault and save its contents to a single file, you can use the `close` command.
 You can also specify the path where the vault will be saved and the extension of the file.
+If you want to **encrypt** the vault, you can use the `-E | --encrypt` option.
 
 ```bash
-vault close <vault_name> [--destination <path>] [--extension <ext>]
+vault close <vault_name> [-E | --encrypt] [--destination <path>] [--extension <ext>]
 ```
+
+> [!NOTE]
+> If you choose to encrypt the vault, you will be prompted to enter a password.
 
 ### Open a Vault
 
@@ -80,6 +84,9 @@ opened.
 ```bash
 vault open <vault_name> [--destination <path>]
 ```
+
+> [!NOTE]
+> If the vault is encrypted, you will be prompted to enter the password.
 
 ## License
 
