@@ -8,16 +8,18 @@
 class EncryptionManager
 {
 public:
-	using Salt = std::array<std::uint8_t, 16>;
-	using Nonce = std::array<std::uint8_t, 24>;
+	using Salt = Botan::secure_vector<std::uint8_t>;
+	using Nonce = Botan::secure_vector<std::uint8_t>;
 	using Key = Botan::secure_vector<std::uint8_t>;
+	using Data = Botan::secure_vector<std::uint8_t>;
+	using Password = std::basic_string<char, std::char_traits<char>, Botan::secure_allocator<char>>;
 
 	EncryptionManager() = delete;
 
-	[[nodiscard]] static std::pair<std::vector<std::uint8_t>, Nonce> encrypt(std::vector<std::uint8_t> data, const std::string& password, const Salt&);
-	[[nodiscard]] static std::vector<std::uint8_t> decrypt(std::vector<std::uint8_t> data, const std::string& password, const Salt&, const Nonce&);
+	[[nodiscard]] static std::pair<Data, Nonce> encrypt(Data, const Password&, const Salt&);
+	[[nodiscard]] static Data decrypt(Data, const Password&, const Salt&, const Nonce&);
 	[[nodiscard]] static Salt generate_new_salt();
 
 private:
-	[[nodiscard]] static Key derive_key(const std::string& password, const Salt&);
+	[[nodiscard]] static Key derive_key(const Password&, const Salt&);
 };

@@ -7,8 +7,8 @@ void VaultManager::open_vault(const std::filesystem::path& vault, const std::opt
 	vault_obj.open(destination);
 }
 
-void VaultManager::close_vault(const std::filesystem::path& vault, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension)
+void VaultManager::close_vault(const std::filesystem::path& vault, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension, const bool encrypt)
 {
 	Vault vault_obj(vault);
-	vault_obj.close(destination, extension);
+	vault_obj.close(destination, extension, encrypt);
 }

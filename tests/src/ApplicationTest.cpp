@@ -3,11 +3,13 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include "Vault.h"
+
 class MockVaultManager final : public VaultManager
 {
 public:
     MOCK_METHOD(void, open_vault, (const std::filesystem::path& vault, const std::optional<std::filesystem::path>& destination), (override));
-    MOCK_METHOD(void, close_vault, (const std::filesystem::path& vault, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension), (override));
+    MOCK_METHOD(void, close_vault, (const std::filesystem::path& vault, const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension, bool encrypt), (override));
 };
 
 class ApplicationTest : public testing::Test
@@ -84,7 +86,7 @@ TEST_F(ApplicationTest, ExecuteCloseWithValidArgs)
     const char* args[] = {"vault", "close", "--vault", vault.c_str()};
     init(args);
 
-    EXPECT_CALL(*m_vaultManagerPtr, close_vault(testing::Eq(vault), testing::Eq(std::nullopt), testing::Eq(std::nullopt))).Times(1);
+    EXPECT_CALL(*m_vaultManagerPtr, close_vault(testing::Eq(vault), testing::Eq(std::nullopt), testing::Eq(std::nullopt), testing::Eq(false))).Times(1);
 
     EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
 }
@@ -129,7 +131,7 @@ TEST_F(ApplicationTest, ExecuteWithNonExistentVault)
     EXPECT_NE(m_app->execute(), EXIT_SUCCESS);
 }
 
-TEST_F(ApplicationTest, ExecuteWithOpenAndDestination)
+TEST_F(ApplicationTest, ExecuteOpenWithDestination)
 {
     const auto vault = create_file("vault.vlt").string();
     const auto destination = create_directory("destination").string();
@@ -142,20 +144,32 @@ TEST_F(ApplicationTest, ExecuteWithOpenAndDestination)
     EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
 }
 
-TEST_F(ApplicationTest, ExecuteWithCloseAndDestination)
+TEST_F(ApplicationTest, ExecuteCloseWithDestination)
 {
     const auto vault = create_directory("vault").string();
     const auto destination = create_directory("destination").string();
     const char* args[] = {"vault", "close", "--vault", vault.c_str(), "--destination", destination.c_str()};
 
-    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(destination), testing::Eq(std::nullopt))).Times(1);
+    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(destination), testing::Eq(std::nullopt), testing::Eq(false))).Times(1);
 
     init(args);
 
     EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
 }
 
-TEST_F(ApplicationTest, ExecuteWithOpenWithDifferentFlagTypes)
+TEST_F(ApplicationTest, ExecuteCloseWithExtension)
+{
+    const auto vault = create_directory("vault").string();
+    const char* args[] = {"vault", "close", "--vault", vault.c_str(), "--extension", "vault"};
+
+    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(std::nullopt), testing::Eq("vault"), testing::Eq(false))).Times(1);
+
+    init(args);
+
+    EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
+}
+
+TEST_F(ApplicationTest, ExecuteOpenWithDifferentFlagTypes)
 {
     const auto vault = create_file("vault.vlt").string();
     const auto destination = create_directory("destination").string();
@@ -169,13 +183,25 @@ TEST_F(ApplicationTest, ExecuteWithOpenWithDifferentFlagTypes)
     EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
 }
 
-TEST_F(ApplicationTest, ExecuteWithCloseWithDifferentFlagTypes)
+TEST_F(ApplicationTest, ExecuteCloseWithDifferentFlagTypes)
 {
     const auto vault = create_directory("vault").string();
     const auto destination = create_directory("destination").string();
     const char* args[] = {"vault", "close", "--destination", destination.c_str(), vault.c_str()};
 
-    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(destination), testing::Eq(std::nullopt))).Times(1);
+    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(destination), testing::Eq(std::nullopt), testing::Eq(false))).Times(1);
+
+    init(args);
+
+    EXPECT_EQ(m_app->execute(), EXIT_SUCCESS);
+}
+
+TEST_F(ApplicationTest, ExecuteCloseWithEncryption)
+{
+    const auto vault = create_directory("vault").string();
+    const char* args[] = {"vault", "close", "-E", vault.c_str()};
+
+    EXPECT_CALL(*m_vaultManager, close_vault(testing::Eq(vault), testing::Eq(std::nullopt), testing::Eq(std::nullopt), testing::Eq(true))).Times(1);
 
     init(args);
 

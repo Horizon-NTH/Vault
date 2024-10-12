@@ -13,6 +13,8 @@ int Application::execute()
 {
 	try
 	{
+		if (m_args.size() == 1)
+			throw CLI::CallForHelp();
 		m_parser.parse(static_cast<int>(m_args.size()), m_args.data());
 	}
 	catch (const CLI::CallForVersion&)
@@ -23,7 +25,7 @@ int Application::execute()
 	{
 		return m_parser.exit(e);
 	}
-	catch (const std::runtime_error& e)
+	catch (const std::exception& e)
 	{
 		std::cerr << "Error: " << e.what() << std::endl;
 		return EXIT_FAILURE;
@@ -52,6 +54,7 @@ void Application::set_args_parsing()
 	const auto destination = std::make_shared<std::optional<std::filesystem::path>>();
 	const auto extension = std::make_shared<std::optional<std::string>>();
 	const auto vaultPath = std::make_shared<std::filesystem::path>();
+	const auto encrypt = std::make_shared<bool>(false);
 
 	const auto open = m_parser.add_subcommand("open", "Open a vault");
 	open->add_option("vault, -v, --vault", *vaultPath, "Path to the vault file")
@@ -68,7 +71,8 @@ void Application::set_args_parsing()
 	close->add_option("destination, -d, --destination", *destination, "Path to the destination directory")
 	     ->check(CLI::ExistingDirectory);
 	close->add_option("extension, -e, --extension", *extension, "Extension of the vault file");
-	close->callback([this, vaultPath, destination, extension] { m_vaultManager->close_vault(*vaultPath, *destination, *extension); });
+	close->add_flag("-E, --encrypt", *encrypt, "Encrypt the vault file, you will be prompted for a password");
+	close->callback([this, vaultPath, destination, extension, encrypt] { m_vaultManager->close_vault(*vaultPath, *destination, *extension, *encrypt); });
 }
 
 void Application::print_version()

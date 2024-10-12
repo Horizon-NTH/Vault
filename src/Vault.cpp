@@ -1,6 +1,7 @@
 #include "Vault.h"
 #include "File.h"
 #include "XMLParser.h"
+#include "Utils.h"
 
 #include <stack>
 #include <fstream>
@@ -23,20 +24,40 @@ void Vault::open(const std::optional<std::filesystem::path>& destination)
 	if (m_opened)
 		throw std::runtime_error("You can't open a vault that is already opened");
 	read_from_file();
-	remove();
+	const auto backUp = m_file;
+	const auto tempMove = get_temp_name(backUp.path().parent_path());
+	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry(destination.value_or(m_file.path().parent_path()) / m_name);
-	write_to_dir();
+	try { write_to_dir(); }
+	catch ([[maybe_unused]] const std::exception& e)
+	{
+		remove_all(m_file);
+		m_file = backUp;
+		rename(tempMove, m_file);
+		throw;
+	}
+	remove_all(tempMove);
 	m_opened = true;
 }
 
-void Vault::close(const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension)
+void Vault::close(const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension, const bool encrypt)
 {
 	if (!m_opened)
 		throw std::invalid_argument("You can't close a vault that is already closed");
 	read_from_dir();
-	remove();
+	const auto backUp = m_file;
+	const auto tempMove = get_temp_name(backUp.path().parent_path());
+	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()) / m_name).replace_extension(extension.value_or(".vlt")));
-	write_to_file();
+	try { write_to_file(encrypt); }
+	catch ([[maybe_unused]] const std::exception& e)
+	{
+		remove_all(m_file);
+		m_file = backUp;
+		rename(tempMove, m_file);
+		throw;
+	}
+	remove_all(tempMove);
 	m_opened = false;
 }
 
@@ -55,6 +76,8 @@ void Vault::read_from_dir()
 
 		for (const auto& entry : std::filesystem::directory_iterator(dir_path))
 		{
+			if (entry.is_symlink())
+				throw std::runtime_error("Invalid vault file format: " + entry.path().string() + " is a symlink");
 			if (entry.is_regular_file())
 				dir.get().children().push_back(std::make_unique<File>(entry.path().filename().string(), Botan::base64_encode(File::read(entry.path()))));
 			else if (entry.is_directory())
@@ -99,7 +122,7 @@ void Vault::read_from_file()
 	extract_from_xml(std::move(content));
 }
 
-void Vault::write_to_file() const
+void Vault::write_to_file(const bool encrypt) const
 {
 	if (m_file.exists())
 		throw std::runtime_error(m_file.path().string() + " already exists");
@@ -108,17 +131,42 @@ void Vault::write_to_file() const
 	if (!vault_file.is_open())
 		throw std::ios_base::failure("Failed to open the file: " + m_file.path().string());
 
-	write_content(vault_file, 0);
-}
-
-void Vault::remove() const
-{
-	remove_all(m_file);
+	if (!encrypt)
+	{
+		write_content(vault_file, 0);
+	}
+	else
+	{
+		std::stringstream vaultContent;
+		write_content(vaultContent, 0);
+		const auto password = ask_password_with_confirmation();
+		if (!password)
+			throw std::runtime_error("Password confirmation failed");
+		const auto salt = EncryptionManager::generate_new_salt();
+		auto str = vaultContent.str();
+		auto data = EncryptionManager::Data(str.begin(), str.end());
+		const auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), *password, salt);
+		vault_file << "<encrypted data=\"" << Botan::base64_encode(encrypted_data) << "\" nonce=\"" << Botan::base64_encode(nonce) << "\" salt=\""
+				<< Botan::base64_encode(salt) << "\"/>";
+	}
 }
 
 void Vault::extract_from_xml(std::string&& content)
 {
 	auto node = XMLParser::parse(std::move(content));
+
+	if (node->tag() == "encrypted")
+	{
+		const auto data = node->attributes().at("data");
+		const auto nonce = node->attributes().at("nonce");
+		const auto salt = node->attributes().at("salt");
+		const auto password = ask_password_with_confirmation();
+		if (!password)
+			throw std::runtime_error("Password confirmation failed");
+		auto decrypted_data = EncryptionManager::decrypt(Botan::base64_decode(data), *password, Botan::base64_decode(salt), Botan::base64_decode(nonce));
+		node = XMLParser::parse(std::string(decrypted_data.begin(), decrypted_data.end()));
+	}
+
 	if (node->tag() != "vault")
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = node->attributes().at("name");

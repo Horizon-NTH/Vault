@@ -30,6 +30,7 @@ set(HEADER_FILES
 	include/XMLNode.h
 	include/EncryptionManager.h
 	include/VaultManager.h
+	include/Utils.h
 )
 
 set(SOURCE_FILES
@@ -42,6 +43,7 @@ set(SOURCE_FILES
 	src/XMLNode.cpp
 	src/EncryptionManager.cpp
 	src/VaultManager.cpp
+	src/Utils.cpp
 )
 
 find_package(Botan 3.5.0 REQUIRED)

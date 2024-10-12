@@ -28,6 +28,12 @@ class XMLParser
 					             "name"sv,
 				             },
 				             false},
+				existingTags{"encrypted"sv, existingAttributes{
+					             "data"sv,
+					             "nonce"sv,
+					             "salt"sv,
+				             },
+				             true},
 			};
 
 public:
