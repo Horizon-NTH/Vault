@@ -2,7 +2,7 @@
 
 #include <utility>
 
-Node::Node(std::filesystem::path name):
+Node::Node(std::string name):
 	m_name(std::move(name))
 {
 }

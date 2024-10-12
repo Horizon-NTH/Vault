@@ -3,10 +3,10 @@
 #include <gtest/gtest.h>
 #include <botan/auto_rng.h>
 
-std::vector<std::uint8_t> generate_random_data(const size_t size)
+EncryptionManager::Data generate_random_data(const size_t size)
 {
     Botan::AutoSeeded_RNG rng;
-    std::vector<std::uint8_t> data(size);
+    EncryptionManager::Data data(size);
     rng.randomize(data.data(), size);
     return data;
 }
@@ -14,7 +14,7 @@ std::vector<std::uint8_t> generate_random_data(const size_t size)
 class EncryptionManagerTest : public testing::Test
 {
 protected:
-    std::string password;
+    EncryptionManager::Password password;
     EncryptionManager::Salt salt{};
 
     void SetUp() override
@@ -52,10 +52,10 @@ TEST_F(EncryptionManagerTest, WrongPasswordDecryption)
     const auto data = generate_random_data(1024);
     auto [encrypted_data, nonce] = EncryptionManager::encrypt(data, password, salt);
 
-    const std::string wrong_password = "wrong-password";
+    const EncryptionManager::Password wrong_password = "wrong-password";
     EXPECT_THROW({
         auto _ = EncryptionManager::decrypt(std::move(encrypted_data), wrong_password, salt, nonce);
-        }, Botan::Invalid_Authentication_Tag) << "Decrypting with the wrong password should throw an exception";
+        }, std::runtime_error) << "Decrypting with the wrong password should throw an exception";
 }
 
 TEST_F(EncryptionManagerTest, WrongSaltDecryption)
@@ -65,7 +65,7 @@ TEST_F(EncryptionManagerTest, WrongSaltDecryption)
 
     EXPECT_THROW({
         auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, EncryptionManager::generate_new_salt(), nonce);
-        }, Botan::Invalid_Authentication_Tag) << "Decrypting with the wrong salt should throw an exception";
+        }, std::runtime_error) << "Decrypting with the wrong salt should throw an exception";
 }
 
 TEST_F(EncryptionManagerTest, ModifiedCiphertextFailsDecryption)
@@ -77,7 +77,7 @@ TEST_F(EncryptionManagerTest, ModifiedCiphertextFailsDecryption)
 
     EXPECT_THROW({
         auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
-        }, Botan::Invalid_Authentication_Tag) << "Decrypting modified ciphertext should throw an exception.";
+        }, std::runtime_error) << "Decrypting modified ciphertext should throw an exception.";
 }
 
 TEST_F(EncryptionManagerTest, ModifiedNonceFailsDecryption)
@@ -90,12 +90,12 @@ TEST_F(EncryptionManagerTest, ModifiedNonceFailsDecryption)
 
     EXPECT_THROW({
         auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, modified_nonce);
-        }, Botan::Invalid_Authentication_Tag) << "Decrypting with a modified nonce should throw an exception.";
+        }, std::runtime_error) << "Decrypting with a modified nonce should throw an exception.";
 }
 
 TEST_F(EncryptionManagerTest, EmptyData)
 {
-    const std::vector<std::uint8_t> empty_data;
+    const EncryptionManager::Data empty_data;
     EXPECT_NO_THROW({
         const auto encrypted = EncryptionManager::encrypt(empty_data, password, salt);
         const auto uncrypted = EncryptionManager::decrypt(encrypted.first, password, salt, encrypted.second);
@@ -111,12 +111,12 @@ TEST_F(EncryptionManagerTest, CiphertextTooShortFailsDecryption)
 
     EXPECT_THROW({
         auto _ = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);
-        }, Botan::Invalid_Authentication_Tag) << "Decrypting an incomplete ciphertext should throw an exception.";
+        }, std::runtime_error) << "Decrypting an incomplete ciphertext should throw an exception.";
 }
 
 TEST_F(EncryptionManagerTest, NonRandomDataEncryptionDecryption)
 {
-    const std::vector<std::uint8_t> known_data = {'T', 'e', 's', 't', ' ', 'd', 'a', 't', 'a'};
+    const EncryptionManager::Data known_data = {'T', 'e', 's', 't', ' ', 'd', 'a', 't', 'a'};
     auto [encrypted_data, nonce] = EncryptionManager::encrypt(known_data, password, salt);
 
     const auto decrypted_data = EncryptionManager::decrypt(std::move(encrypted_data), password, salt, nonce);

@@ -16,7 +16,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 
-project(vault VERSION 1.0)
+project(vault VERSION 2.0)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 
@@ -30,6 +30,7 @@ set(HEADER_FILES
 	include/XMLNode.h
 	include/EncryptionManager.h
 	include/VaultManager.h
+	include/Utils.h
 )
 
 set(SOURCE_FILES
@@ -42,12 +43,12 @@ set(SOURCE_FILES
 	src/XMLNode.cpp
 	src/EncryptionManager.cpp
 	src/VaultManager.cpp
+	src/Utils.cpp
 )
 
 find_package(Botan 3.5.0 REQUIRED)
 find_package(CLI11 2.4.2 REQUIRED)
-find_package(yaml-cpp 0.8.0 REQUIRED)
-set(DEPS CLI11::CLI11 botan::botan yaml-cpp::yaml-cpp)
+set(DEPS CLI11::CLI11 botan::botan)
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 

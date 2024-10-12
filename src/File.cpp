@@ -3,7 +3,7 @@
 #include <fstream>
 #include <utility>
 
-File::File(std::filesystem::path name, std::string&& data):
+File::File(std::string name, std::string&& data):
 	Node(std::move(name)),
 	m_data(std::move(data))
 {
@@ -37,7 +37,7 @@ std::vector<uint8_t> File::read(const std::filesystem::path& path)
 
 void File::write_content(std::ostream& os, const size_t indentation) const
 {
-	os << std::string(indentation, '\t') << "<file name=\"" << m_name.string() << "\" data=\"" << data() << "\"/>" << std::endl;
+	os << std::string(indentation, '\t') << "<file name=\"" << m_name << "\" data=\"" << data() << "\"/>" << std::endl;
 }
 
 void File::create(const std::filesystem::path& parentPath) const
