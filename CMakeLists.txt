@@ -16,7 +16,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "${CMAKE_BINARY_DIR}/conan_provider.cmake")
 
-project(vault VERSION 2.0)
+project(vault VERSION 2.1)
 
 option(ENABLE_TESTS "Enable testing" OFF)
 
@@ -26,8 +26,6 @@ set(HEADER_FILES
 	include/Directory.h
 	include/Vault.h
 	include/Application.h
-	include/XMLParser.h
-	include/XMLNode.h
 	include/EncryptionManager.h
 	include/VaultManager.h
 	include/Utils.h
@@ -39,8 +37,6 @@ set(SOURCE_FILES
 	src/Directory.cpp
 	src/Vault.cpp
 	src/Application.cpp
-	src/XMLParser.cpp
-	src/XMLNode.cpp
 	src/EncryptionManager.cpp
 	src/VaultManager.cpp
 	src/Utils.cpp
@@ -48,7 +44,8 @@ set(SOURCE_FILES
 
 find_package(Botan 3.5.0 REQUIRED)
 find_package(CLI11 2.4.2 REQUIRED)
-set(DEPS CLI11::CLI11 botan::botan)
+find_package(pugixml 1.12.1 REQUIRED)
+set(DEPS CLI11::CLI11 botan::botan pugixml::pugixml)
 
 set(PROJECT_LIB ${PROJECT_NAME}_lib)
 

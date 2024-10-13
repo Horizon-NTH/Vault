@@ -15,15 +15,16 @@ const std::vector<std::unique_ptr<Node>>& Directory::children() const
 	return m_children;
 }
 
-void Directory::write_content(std::ostream& os, const size_t indentation) const
+void Directory::write_content(pugi::xml_node& parentNode) const
 {
-	const std::string indentation_str(indentation, '\t');
-	os << indentation_str << "<directory name=\"" << m_name << "\">" << std::endl;
+	auto node = parentNode.append_child("directory");
+	if (!node)
+		throw std::runtime_error("Failed to create directory node");
+	node.append_attribute("name").set_value(m_name.c_str());
 	for (const auto& child : m_children)
 	{
-		child->write_content(os, indentation + 1);
+		child->write_content(node);
 	}
-	os << indentation_str << "</directory>" << std::endl;
 }
 
 void Directory::create(const std::filesystem::path& parentPath) const

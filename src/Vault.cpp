@@ -1,10 +1,10 @@
 #include "Vault.h"
 #include "File.h"
-#include "XMLParser.h"
 #include "Utils.h"
 
 #include <stack>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <botan/base64.h>
 
@@ -112,14 +112,54 @@ void Vault::read_from_file()
 	if (!exists(vault_path))
 		throw std::runtime_error(vault_path.string() + " doesn't exists");
 
-	const std::ifstream vault_file(vault_path.string());
-	if (!vault_file.is_open())
-		throw std::ios_base::failure("Failed to open the file: " + vault_path.string());
+	auto doc = pugi::xml_document();
+	if (!doc.load_file(vault_path.string().c_str()))
+		throw std::runtime_error("Failed to load the XML file: " + vault_path.string());
+	auto root = doc.document_element();
 
-	const std::stringstream ss = std::stringstream{} << vault_file.rdbuf();
-	std::string content = ss.str();
+	using namespace std::string_view_literals;
+	if (root.name() == "encrypted"sv)
+	{
+		const auto password = ask_password_with_confirmation();
+		if (!password)
+			throw std::runtime_error("Password confirmation failed");
+		const auto data = Botan::base64_decode(root.attribute("data").value());
+		const auto nonce = Botan::base64_decode(root.attribute("nonce").value());
+		const auto salt = Botan::base64_decode(root.attribute("salt").value());
+		const auto decrypted_data = EncryptionManager::decrypt(data, *password, salt, nonce);
+		if (!doc.load_buffer(decrypted_data.data(), decrypted_data.size()))
+			throw std::runtime_error("Failed to load the decrypted XML data");
+		root = doc.document_element();
+	}
 
-	extract_from_xml(std::move(content));
+	if (root.name() != "vault"sv)
+		throw std::runtime_error("Invalid vault file format: missing vault tag");
+	m_name = root.attribute("name").value();
+
+	std::deque<std::pair<pugi::xml_node, std::reference_wrapper<Directory>>> dirs;
+	dirs.emplace_back(root, std::ref(*this));
+	while (!dirs.empty())
+	{
+		for (auto& [xmlNode, dir] = dirs.front(); auto& child : xmlNode.children())
+		{
+			if (child.name() == "file"sv)
+			{
+				const auto name = child.attribute("name").value();
+				auto data = child.attribute("data").value();
+				dir.get().children().push_back(std::make_unique<File>(name, data));
+			}
+			else if (child.name() == "directory"sv)
+			{
+				const auto name = child.attribute("name").value();
+				auto directory = std::make_unique<Directory>(name);
+				dirs.emplace_back(child, std::ref(*directory));
+				dir.get().children().push_back(std::move(directory));
+			}
+			else
+				throw std::runtime_error("Invalid vault file format: unknown tag " + std::string(child.name()));
+		}
+		dirs.pop_front();
+	}
 }
 
 void Vault::write_to_file(const bool encrypt) const
@@ -131,79 +171,42 @@ void Vault::write_to_file(const bool encrypt) const
 	if (!vault_file.is_open())
 		throw std::ios_base::failure("Failed to open the file: " + m_file.path().string());
 
+	auto doc = pugi::xml_document();
 	if (!encrypt)
 	{
-		write_content(vault_file, 0);
+		write_content(doc);
 	}
 	else
 	{
-		std::stringstream vaultContent;
-		write_content(vaultContent, 0);
+		std::ostringstream vaultContent;
+		write_content(doc);
 		const auto password = ask_password_with_confirmation();
 		if (!password)
 			throw std::runtime_error("Password confirmation failed");
 		const auto salt = EncryptionManager::generate_new_salt();
+		doc.save(vaultContent);
 		auto str = vaultContent.str();
 		auto data = EncryptionManager::Data(str.begin(), str.end());
 		const auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), *password, salt);
-		vault_file << "<encrypted data=\"" << Botan::base64_encode(encrypted_data) << "\" nonce=\"" << Botan::base64_encode(nonce) << "\" salt=\""
-				<< Botan::base64_encode(salt) << "\"/>";
+		doc.reset();
+		auto root = doc.append_child("encrypted");
+		if (!root)
+			throw std::runtime_error("Failed to create the XML node");
+		root.append_attribute("data").set_value(base64_encode(encrypted_data).c_str());
+		root.append_attribute("nonce").set_value(base64_encode(nonce).c_str());
+		root.append_attribute("salt").set_value(base64_encode(salt).c_str());
 	}
+	doc.save(vault_file, "\t", pugi::format_no_declaration | pugi::format_indent);
 }
 
-void Vault::extract_from_xml(std::string&& content)
+void Vault::write_content(pugi::xml_node& parentNode) const
 {
-	auto node = XMLParser::parse(std::move(content));
-
-	if (node->tag() == "encrypted")
-	{
-		const auto data = node->attributes().at("data");
-		const auto nonce = node->attributes().at("nonce");
-		const auto salt = node->attributes().at("salt");
-		const auto password = ask_password_with_confirmation();
-		if (!password)
-			throw std::runtime_error("Password confirmation failed");
-		auto decrypted_data = EncryptionManager::decrypt(Botan::base64_decode(data), *password, Botan::base64_decode(salt), Botan::base64_decode(nonce));
-		node = XMLParser::parse(std::string(decrypted_data.begin(), decrypted_data.end()));
-	}
-
-	if (node->tag() != "vault")
-		throw std::runtime_error("Invalid vault file format: missing vault tag");
-	m_name = node->attributes().at("name");
-
-	std::deque<std::pair<std::unique_ptr<XMLNode>, std::reference_wrapper<Directory>>> dirs;
-	dirs.emplace_back(std::move(node), std::ref(*this));
-	while (!dirs.empty())
-	{
-		for (auto& [xmlNode, dir] = dirs.front(); auto& child : xmlNode->children())
-		{
-			if (child->tag() == "file")
-			{
-				const auto name = child->attributes().at("name");
-				auto data = child->attributes().at("data");
-				dir.get().children().push_back(std::make_unique<File>(name, std::move(data)));
-			}
-			else if (child->tag() == "directory")
-			{
-				const auto name = child->attributes().at("name");
-				auto directory = std::make_unique<Directory>(name);
-				dirs.emplace_back(std::move(child), std::ref(*directory));
-				dir.get().children().push_back(std::move(directory));
-			}
-			else
-				throw std::runtime_error("Invalid vault file format: unknown tag " + std::string(child->tag()));
-		}
-		dirs.pop_front();
-	}
-}
-
-void Vault::write_content(std::ostream& os, const size_t indentation) const
-{
-	const std::string indentation_str(indentation, '\t');
-	os << indentation_str << "<vault name=\"" << m_name << "\">" << std::endl;
+	auto node = parentNode.append_child("vault");
+	if (!node)
+		throw std::runtime_error("Failed to create the XML node");
+	node.append_attribute("name").set_value(m_name.c_str());
 	for (const auto& child : m_children)
 	{
-		child->write_content(os, indentation + 1);
+		child->write_content(node);
 	}
-	os << indentation_str << "</vault>" << std::endl;
 }
