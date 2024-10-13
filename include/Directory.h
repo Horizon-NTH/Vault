@@ -14,6 +14,6 @@ public:
 protected:
 	std::vector<std::unique_ptr<Node>> m_children;
 
-	void write_content(std::ostream& os, size_t indentation) const override;
+	void write_content(pugi::xml_node& parentNode) const override;
 	void create(const std::filesystem::path& parentPath) const override;
 };

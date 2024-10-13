@@ -3,7 +3,7 @@
 #include <fstream>
 #include <utility>
 
-File::File(std::string name, std::string&& data):
+File::File(std::string name, std::string data):
 	Node(std::move(name)),
 	m_data(std::move(data))
 {
@@ -35,9 +35,13 @@ std::vector<uint8_t> File::read(const std::filesystem::path& path)
 	return std::move(fileData);
 }
 
-void File::write_content(std::ostream& os, const size_t indentation) const
+void File::write_content(pugi::xml_node& parentNode) const
 {
-	os << std::string(indentation, '\t') << "<file name=\"" << m_name << "\" data=\"" << data() << "\"/>" << std::endl;
+	auto node = parentNode.append_child("file");
+	if (!node)
+		throw std::runtime_error("Failed to create the XML node");
+	node.append_attribute("name").set_value(m_name.c_str());
+	node.append_attribute("data").set_value(m_data.c_str());
 }
 
 void File::create(const std::filesystem::path& parentPath) const

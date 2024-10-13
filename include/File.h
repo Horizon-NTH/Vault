@@ -6,7 +6,7 @@
 class File final : public Node
 {
 public:
-	File(std::string name, std::string&& data);
+	File(std::string name, std::string data);
 
 	[[nodiscard]] const std::string& data() const;
 
@@ -15,6 +15,6 @@ public:
 private:
 	std::string m_data;
 
-	void write_content(std::ostream& os, size_t indentation) const override;
+	void write_content(pugi::xml_node& parentNode) const override;
 	void create(const std::filesystem::path& parentPath) const override;
 };

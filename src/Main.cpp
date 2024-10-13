@@ -1,6 +1,7 @@
 #include "Application.h"
 #include <iostream>
 #include "Utils.h"
+#include <pugixml.hpp>
 
 int main(const int argc, const char* argv[])
 {

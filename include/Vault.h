@@ -23,7 +23,6 @@ private:
 	void write_to_dir();
 	void read_from_file();
 	void write_to_file(bool encrypt) const;
-	void extract_from_xml(std::string&& content);
 
-	void write_content(std::ostream& os, size_t indentation) const override;
+	void write_content(pugi::xml_node& parentNode) const override;
 };

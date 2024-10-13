@@ -8,7 +8,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(TEST_SOURCES
 	src/VaultTest.cpp
 	src/ApplicationTest.cpp
-	src/XMLParserTest.cpp
 	src/EncryptionManagerTest.cpp
 )
 
