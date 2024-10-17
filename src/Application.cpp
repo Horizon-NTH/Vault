@@ -55,6 +55,7 @@ void Application::set_args_parsing()
 	const auto extension = std::make_shared<std::optional<std::string>>();
 	const auto vaultPath = std::make_shared<std::filesystem::path>();
 	const auto encrypt = std::make_shared<bool>(false);
+	const auto compress = std::make_shared<bool>(false);
 
 	const auto open = m_parser.add_subcommand("open", "Open a vault");
 	open->add_option("vault, -v, --vault", *vaultPath, "Path to the vault file")
@@ -72,7 +73,8 @@ void Application::set_args_parsing()
 	     ->check(CLI::ExistingDirectory);
 	close->add_option("extension, -e, --extension", *extension, "Extension of the vault file");
 	close->add_flag("-E, --encrypt", *encrypt, "Encrypt the vault file, you will be prompted for a password");
-	close->callback([this, vaultPath, destination, extension, encrypt] { m_vaultManager->close_vault(*vaultPath, *destination, *extension, *encrypt); });
+	close->add_flag("-C, --compress", *compress, "Compress the vault file");
+	close->callback([this, vaultPath, destination, extension, encrypt, compress] { m_vaultManager->close_vault(*vaultPath, *destination, *extension, *compress, *encrypt); });
 }
 
 void Application::print_version()

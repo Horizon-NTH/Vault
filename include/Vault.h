@@ -13,7 +13,7 @@ public:
 	explicit Vault(const std::filesystem::path& file);
 
 	void open(const std::optional<std::filesystem::path>& destination = std::nullopt);
-	void close(const std::optional<std::filesystem::path>& destination = std::nullopt, const std::optional<std::string>& extension = std::nullopt, bool encrypt = false);
+	void close(const std::optional<std::filesystem::path>& destination = std::nullopt, const std::optional<std::string>& extension = std::nullopt, bool compress = false, bool encrypt = false);
 
 private:
 	std::filesystem::directory_entry m_file;
@@ -22,7 +22,7 @@ private:
 	void read_from_dir();
 	void write_to_dir();
 	void read_from_file();
-	void write_to_file(bool encrypt) const;
+	void write_to_file(bool compress, bool encrypt) const;
 
 	void write_content(pugi::xml_node& parentNode) const override;
 };
