@@ -43,6 +43,34 @@ protected:
         write_file("test_vault/file2.txt", "Content of test_vault/file2.txt");
     }
 
+    static std::string get_test_vault_xml()
+    {
+        return "<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\" />\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\" />\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\" />\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\" />\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\" />\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\" />\n\t\t</directory>\n\t</directory>\n</vault>\n";
+    }
+
+    void assert_test_vault_existence() const
+    {
+        EXPECT_TRUE(exists("test_vault"));
+        EXPECT_FALSE(exists("test_vault.vlt"));
+
+        EXPECT_TRUE(exists("test_vault"));
+        EXPECT_TRUE(exists("test_vault/inner"));
+        EXPECT_TRUE(exists("test_vault/inner/inner"));
+        EXPECT_TRUE(exists("test_vault/inner/inner/file.txt"));
+        EXPECT_TRUE(exists("test_vault/inner/inner/file2.txt"));
+        EXPECT_TRUE(exists("test_vault/inner/file.txt"));
+        EXPECT_TRUE(exists("test_vault/inner/file2.txt"));
+        EXPECT_TRUE(exists("test_vault/file.txt"));
+        EXPECT_TRUE(exists("test_vault/file2.txt"));
+
+        EXPECT_EQ(read_file("test_vault/inner/inner/file.txt"), "Content of file.txt");
+        EXPECT_EQ(read_file("test_vault/inner/inner/file2.txt"), "Content of file2.txt");
+        EXPECT_EQ(read_file("test_vault/inner/file.txt"), "Content of inner/file.txt");
+        EXPECT_EQ(read_file("test_vault/inner/file2.txt"), "Content of inner/file2.txt");
+        EXPECT_EQ(read_file("test_vault/file.txt"), "Content of test_vault/file.txt");
+        EXPECT_EQ(read_file("test_vault/file2.txt"), "Content of test_vault/file2.txt");
+    }
+
     void cleanup_test_environment() const
     {
         if (std::filesystem::exists(m_temp_dir))
@@ -73,6 +101,7 @@ TEST_F(VaultTest, Close)
 
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
+    EXPECT_TRUE(read_file("test_vault.vlt").starts_with("<vault"));
 }
 
 TEST_F(VaultTest, CloseEmptyVault)
@@ -114,30 +143,12 @@ TEST_F(VaultTest, CloseKeepEmptyExtension)
 
 TEST_F(VaultTest, Open)
 {
-    write_file("test_vault.vlt", "<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUyLnR4dA==\"/>\n\t<directory name=\"inner\">\n\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlLnR4dA==\"/>\n\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBpbm5lci9maWxlMi50eHQ=\"/>\n\t\t<directory name=\"inner\">\n\t\t\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiBmaWxlLnR4dA==\"/>\n\t\t\t<file name=\"file2.txt\" data=\"Q29udGVudCBvZiBmaWxlMi50eHQ=\"/>\n\t\t</directory>\n\t</directory>\n</vault>\n");
+    write_file("test_vault.vlt", get_test_vault_xml());
 
     Vault vault(m_temp_dir / "test_vault.vlt");
     vault.open();
 
-    EXPECT_TRUE(exists("test_vault"));
-    EXPECT_FALSE(exists("test_vault.vlt"));
-
-    EXPECT_TRUE(exists("test_vault"));
-    EXPECT_TRUE(exists("test_vault/inner"));
-    EXPECT_TRUE(exists("test_vault/inner/inner"));
-    EXPECT_TRUE(exists("test_vault/inner/inner/file.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/inner/file2.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/file.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/file2.txt"));
-    EXPECT_TRUE(exists("test_vault/file.txt"));
-    EXPECT_TRUE(exists("test_vault/file2.txt"));
-
-    EXPECT_EQ(read_file("test_vault/inner/inner/file.txt"), "Content of file.txt");
-    EXPECT_EQ(read_file("test_vault/inner/inner/file2.txt"), "Content of file2.txt");
-    EXPECT_EQ(read_file("test_vault/inner/file.txt"), "Content of inner/file.txt");
-    EXPECT_EQ(read_file("test_vault/inner/file2.txt"), "Content of inner/file2.txt");
-    EXPECT_EQ(read_file("test_vault/file.txt"), "Content of test_vault/file.txt");
-    EXPECT_EQ(read_file("test_vault/file2.txt"), "Content of test_vault/file2.txt");
+    assert_test_vault_existence();
 }
 
 TEST_F(VaultTest, OpenEmptyVault)
@@ -173,11 +184,11 @@ TEST_F(VaultTest, OpenClose)
 
     EXPECT_TRUE(exists("test_vault.vlt"));
     EXPECT_FALSE(exists("test_vault"));
+    EXPECT_TRUE(read_file("test_vault.vlt").starts_with("<vault"));
 
     vault.open();
 
-    EXPECT_FALSE(exists("test_vault.vlt"));
-    EXPECT_TRUE(exists("test_vault"));
+    assert_test_vault_existence();
 }
 
 TEST_F(VaultTest, OpenCloseEmptyVault)
@@ -205,41 +216,6 @@ TEST_F(VaultTest, OpenCloseEmptyFile)
     vault.open();
 
     EXPECT_EQ(read_file("test_vault/empty_file.txt"), "");
-}
-
-TEST_F(VaultTest, OpenCloseKeepFileStructure)
-{
-    create_test_vault_directory();
-
-    Vault vault(m_temp_dir / "test_vault");
-    vault.close();
-    vault.open();
-
-    EXPECT_TRUE(exists("test_vault"));
-    EXPECT_TRUE(exists("test_vault/inner"));
-    EXPECT_TRUE(exists("test_vault/inner/inner"));
-    EXPECT_TRUE(exists("test_vault/inner/inner/file.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/inner/file2.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/file.txt"));
-    EXPECT_TRUE(exists("test_vault/inner/file2.txt"));
-    EXPECT_TRUE(exists("test_vault/file.txt"));
-    EXPECT_TRUE(exists("test_vault/file2.txt"));
-}
-
-TEST_F(VaultTest, OpenCloseKeepFileContent)
-{
-    create_test_vault_directory();
-
-    Vault vault(m_temp_dir / "test_vault");
-    vault.close();
-    vault.open();
-
-    EXPECT_EQ(read_file("test_vault/inner/inner/file.txt"), read_file("test_vault/inner/inner/file.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/inner/file2.txt"), read_file("test_vault/inner/inner/file2.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/file.txt"), read_file("test_vault/inner/file.txt"));
-    EXPECT_EQ(read_file("test_vault/inner/file2.txt"), read_file("test_vault/inner/file2.txt"));
-    EXPECT_EQ(read_file("test_vault/file.txt"), read_file("test_vault/file.txt"));
-    EXPECT_EQ(read_file("test_vault/file2.txt"), read_file("test_vault/file2.txt"));
 }
 
 TEST_F(VaultTest, OpenCloseBinaryFile)
@@ -414,4 +390,27 @@ TEST_F(VaultTest, InvalidOpenWithNonExistentDestination)
         Vault vault(m_temp_dir / "test_vault.vlt");
         vault.open(m_temp_dir / "test_destination");
         }, std::runtime_error);
+}
+
+TEST_F(VaultTest, CloseWithCompression)
+{
+    create_test_vault_directory();
+
+    Vault vault(m_temp_dir / "test_vault");
+    vault.close(std::nullopt, std::nullopt, true);
+
+    EXPECT_FALSE(exists("test_vault"));
+    EXPECT_TRUE(exists("test_vault.vlt"));
+    EXPECT_TRUE(read_file("test_vault.vlt").starts_with("<compressed"));
+}
+
+TEST_F(VaultTest, OpenWithCompression)
+{
+    create_test_vault_directory();
+
+    Vault vault(m_temp_dir / "test_vault");
+    vault.close(std::nullopt, std::nullopt, true);
+    vault.open();
+
+    assert_test_vault_existence();
 }

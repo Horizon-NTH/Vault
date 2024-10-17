@@ -9,6 +9,7 @@ set(TEST_SOURCES
 	src/VaultTest.cpp
 	src/ApplicationTest.cpp
 	src/EncryptionManagerTest.cpp
+	src/CompressionManagerTest.cpp
 )
 
 add_executable(runTests ${TEST_SOURCES})

@@ -1,11 +1,12 @@
 #include "Vault.h"
 #include "File.h"
 #include "Utils.h"
+#include "CompressionManager.h"
 
 #include <stack>
 #include <fstream>
-#include <iostream>
 #include <sstream>
+#include <zlib.h>
 #include <botan/base64.h>
 
 Vault::Vault(const std::filesystem::path& file):
@@ -40,7 +41,7 @@ void Vault::open(const std::optional<std::filesystem::path>& destination)
 	m_opened = true;
 }
 
-void Vault::close(const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension, const bool encrypt)
+void Vault::close(const std::optional<std::filesystem::path>& destination, const std::optional<std::string>& extension, const bool compress, const bool encrypt)
 {
 	if (!m_opened)
 		throw std::invalid_argument("You can't close a vault that is already closed");
@@ -49,7 +50,7 @@ void Vault::close(const std::optional<std::filesystem::path>& destination, const
 	const auto tempMove = get_temp_name(backUp.path().parent_path());
 	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()) / m_name).replace_extension(extension.value_or(".vlt")));
-	try { write_to_file(encrypt); }
+	try { write_to_file(compress, encrypt); }
 	catch ([[maybe_unused]] const std::exception& e)
 	{
 		remove_all(m_file);
@@ -131,7 +132,15 @@ void Vault::read_from_file()
 			throw std::runtime_error("Failed to load the decrypted XML data");
 		root = doc.document_element();
 	}
-
+	if (root.name() == "compressed"sv)
+	{
+		const auto data = Botan::base64_decode(root.attribute("data").value());
+		const auto originalSize = std::stoul(root.attribute("originalSize").value());
+		const auto decompressedData = CompressionManager::uncompress(data, originalSize);
+		if (!doc.load_buffer(decompressedData.data(), decompressedData.size()))
+			throw std::runtime_error("Failed to load the decrypted XML data");
+		root = doc.document_element();
+	}
 	if (root.name() != "vault"sv)
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
@@ -162,7 +171,7 @@ void Vault::read_from_file()
 	}
 }
 
-void Vault::write_to_file(const bool encrypt) const
+void Vault::write_to_file(bool compress, const bool encrypt) const
 {
 	if (m_file.exists())
 		throw std::runtime_error(m_file.path().string() + " already exists");
@@ -172,27 +181,38 @@ void Vault::write_to_file(const bool encrypt) const
 		throw std::ios_base::failure("Failed to open the file: " + m_file.path().string());
 
 	auto doc = pugi::xml_document();
-	if (!encrypt)
+	write_content(doc);
+	const auto docToData = [&doc]() -> Botan::secure_vector<std::uint8_t>
+		{
+			std::ostringstream vaultContent;
+			doc.save(vaultContent);
+			auto str = vaultContent.str();
+			return {str.begin(), str.end()};
+		};
+	if (compress)
 	{
-		write_content(doc);
+		CompressionManager::Data data = docToData();
+		const auto compressedData = CompressionManager::compress(data);
+		doc.reset();
+		auto root = doc.append_child("compressed");
+		if (!root)
+			throw std::runtime_error("Failed to create the XML node");
+		root.append_attribute("originalSize").set_value(std::to_string(data.size()).c_str());
+		root.append_attribute("data").set_value(base64_encode(compressedData).c_str());
 	}
-	else
+	if (encrypt)
 	{
-		std::ostringstream vaultContent;
-		write_content(doc);
 		const auto password = ask_password_with_confirmation();
 		if (!password)
 			throw std::runtime_error("Password confirmation failed");
 		const auto salt = EncryptionManager::generate_new_salt();
-		doc.save(vaultContent);
-		auto str = vaultContent.str();
-		auto data = EncryptionManager::Data(str.begin(), str.end());
-		const auto [encrypted_data, nonce] = EncryptionManager::encrypt(std::move(data), *password, salt);
+		EncryptionManager::Data data = docToData();
+		const auto [encryptedData, nonce] = EncryptionManager::encrypt(std::move(data), *password, salt);
 		doc.reset();
 		auto root = doc.append_child("encrypted");
 		if (!root)
 			throw std::runtime_error("Failed to create the XML node");
-		root.append_attribute("data").set_value(base64_encode(encrypted_data).c_str());
+		root.append_attribute("data").set_value(base64_encode(encryptedData).c_str());
 		root.append_attribute("nonce").set_value(base64_encode(nonce).c_str());
 		root.append_attribute("salt").set_value(base64_encode(salt).c_str());
 	}
