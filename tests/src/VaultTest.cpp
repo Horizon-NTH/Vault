@@ -114,7 +114,9 @@ TEST_F(VaultTest, CloseEmptyVault)
 
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
-    EXPECT_EQ(read_file("test_vault.vlt"), "<vault name=\"test_vault\" />\n");
+    const auto vaultContent = read_file("test_vault.vlt");
+    EXPECT_TRUE(vaultContent.starts_with("<vault name=\"test_vault\" lastWriteTime="));
+    EXPECT_TRUE(vaultContent.ends_with(" />\n"));
 }
 
 TEST_F(VaultTest, CloseWithCustomExtension)
@@ -413,4 +415,19 @@ TEST_F(VaultTest, OpenWithCompression)
     vault.open();
 
     assert_test_vault_existence();
+}
+
+TEST_F(VaultTest, CloseOpenKeepLastWriteTime)
+{
+    create_directory(m_temp_dir / "test_vault");
+    write_file("test_vault/file.txt", "Content of file.txt");
+    const auto dir_last_write_time = last_write_time(m_temp_dir / "test_vault");
+    const auto file_last_write_time = last_write_time(m_temp_dir / "test_vault/file.txt");
+
+    Vault vault(m_temp_dir / "test_vault");
+    vault.close();
+    vault.open();
+
+    EXPECT_EQ(last_write_time(m_temp_dir / "test_vault"), dir_last_write_time);
+    EXPECT_EQ(last_write_time(m_temp_dir / "test_vault/file.txt"), file_last_write_time);
 }

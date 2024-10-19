@@ -6,11 +6,12 @@
 #include <stack>
 #include <fstream>
 #include <sstream>
-#include <zlib.h>
 #include <botan/base64.h>
+#include <chrono>
+#include <iostream>
 
 Vault::Vault(const std::filesystem::path& file):
-	Directory(file.stem().string()),
+	Directory(file.stem().string(), last_write_time(file)),
 	m_file(file),
 	m_opened(!m_file.is_regular_file())
 {
@@ -30,9 +31,10 @@ void Vault::open(const std::optional<std::filesystem::path>& destination)
 	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry(destination.value_or(m_file.path().parent_path()) / m_name);
 	try { write_to_dir(); }
-	catch ([[maybe_unused]] const std::exception& e)
+	catch (const std::exception& e)
 	{
-		remove_all(m_file);
+		if (!std::string(e.what()).ends_with("already exists"))
+			remove_all(m_file);
 		m_file = backUp;
 		rename(tempMove, m_file);
 		throw;
@@ -51,9 +53,10 @@ void Vault::close(const std::optional<std::filesystem::path>& destination, const
 	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()) / m_name).replace_extension(extension.value_or(".vlt")));
 	try { write_to_file(compress, encrypt); }
-	catch ([[maybe_unused]] const std::exception& e)
+	catch (const std::exception& e)
 	{
-		remove_all(m_file);
+		if (!std::string(e.what()).ends_with("already exists"))
+			remove_all(m_file);
 		m_file = backUp;
 		rename(tempMove, m_file);
 		throw;
@@ -80,10 +83,13 @@ void Vault::read_from_dir()
 			if (entry.is_symlink())
 				throw std::runtime_error("Invalid vault file format: " + entry.path().string() + " is a symlink");
 			if (entry.is_regular_file())
-				dir.get().children().push_back(std::make_unique<File>(entry.path().filename().string(), Botan::base64_encode(File::read(entry.path()))));
+			{
+				const auto& path = entry.path();
+				dir.get().children().push_back(std::make_unique<File>(path.filename().string(), entry.last_write_time(), Botan::base64_encode(File::read(path))));
+			}
 			else if (entry.is_directory())
 			{
-				auto directory = std::make_unique<Directory>(entry.path().filename().string());
+				auto directory = std::make_unique<Directory>(entry.path().filename().string(), entry.last_write_time());
 				dirs_to_visit.emplace(entry.path(), *directory);
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -144,6 +150,7 @@ void Vault::read_from_file()
 	if (root.name() != "vault"sv)
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
+	std::istringstream(root.attribute("lastWriteTime").value()) >> parse("%F %T", m_lastWriteTime);
 
 	std::deque<std::pair<pugi::xml_node, std::reference_wrapper<Directory>>> dirs;
 	dirs.emplace_back(root, std::ref(*this));
@@ -155,12 +162,16 @@ void Vault::read_from_file()
 			{
 				const auto name = child.attribute("name").value();
 				auto data = child.attribute("data").value();
-				dir.get().children().push_back(std::make_unique<File>(name, data));
+				std::filesystem::file_time_type lastWriteTime;
+				std::istringstream(child.attribute("lastWriteTime").value()) >> parse("%F %T", lastWriteTime);
+				dir.get().children().push_back(std::make_unique<File>(name, lastWriteTime, data));
 			}
 			else if (child.name() == "directory"sv)
 			{
 				const auto name = child.attribute("name").value();
-				auto directory = std::make_unique<Directory>(name);
+				std::filesystem::file_time_type lastWriteTime;
+				std::istringstream(child.attribute("lastWriteTime").value()) >> parse("%F %T", lastWriteTime);
+				auto directory = std::make_unique<Directory>(name, lastWriteTime);
 				dirs.emplace_back(child, std::ref(*directory));
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -225,6 +236,7 @@ void Vault::write_content(pugi::xml_node& parentNode) const
 	if (!node)
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
+	node.append_attribute("lastWriteTime").set_value(std::format("{}", m_lastWriteTime).c_str());
 	for (const auto& child : m_children)
 	{
 		child->write_content(node);

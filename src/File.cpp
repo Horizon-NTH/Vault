@@ -2,9 +2,11 @@
 #include <botan/base64.h>
 #include <fstream>
 #include <utility>
+#include <format>
+#include <chrono>
 
-File::File(std::string name, std::string data):
-	Node(std::move(name)),
+File::File(std::string name, const std::filesystem::file_time_type lastWriteTime, std::string data):
+	Node(std::move(name), lastWriteTime),
 	m_data(std::move(data))
 {
 }
@@ -42,6 +44,7 @@ void File::write_content(pugi::xml_node& parentNode) const
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("data").set_value(m_data.c_str());
+	node.append_attribute("lastWriteTime").set_value(std::format("{}", m_lastWriteTime).c_str());
 }
 
 void File::create(const std::filesystem::path& parentPath) const
@@ -53,4 +56,6 @@ void File::create(const std::filesystem::path& parentPath) const
 
 	const auto data = Botan::base64_decode(m_data);
 	file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
+	file.close();
+	last_write_time(full_path, m_lastWriteTime);
 }

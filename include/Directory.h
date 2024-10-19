@@ -6,7 +6,7 @@
 class Directory : public Node
 {
 public:
-	explicit Directory(std::string name);
+	explicit Directory(std::string name, std::filesystem::file_time_type lastWriteTime);
 
 	[[nodiscard]] std::vector<std::unique_ptr<Node>>& children();
 	[[nodiscard]] const std::vector<std::unique_ptr<Node>>& children() const;
