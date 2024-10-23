@@ -8,10 +8,9 @@
 #include <sstream>
 #include <botan/base64.h>
 #include <chrono>
-#include <iostream>
 
 Vault::Vault(const std::filesystem::path& file):
-	Directory(file.stem().string(), last_write_time(file)),
+	Directory(file.stem().string(), last_write_time(file), status(file).permissions()),
 	m_file(file),
 	m_opened(!m_file.is_regular_file())
 {
@@ -85,11 +84,11 @@ void Vault::read_from_dir()
 			if (entry.is_regular_file())
 			{
 				const auto& path = entry.path();
-				dir.get().children().push_back(std::make_unique<File>(path.filename().string(), entry.last_write_time(), Botan::base64_encode(File::read(path))));
+				dir.get().children().push_back(std::make_unique<File>(path.filename().string(), entry.last_write_time(), entry.status().permissions(), Botan::base64_encode(File::read(path))));
 			}
 			else if (entry.is_directory())
 			{
-				auto directory = std::make_unique<Directory>(entry.path().filename().string(), entry.last_write_time());
+				auto directory = std::make_unique<Directory>(entry.path().filename().string(), entry.last_write_time(), entry.status().permissions());
 				dirs_to_visit.emplace(entry.path(), *directory);
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -99,15 +98,12 @@ void Vault::read_from_dir()
 	}
 }
 
-void Vault::write_to_dir()
+void Vault::write_to_dir() const
 {
-	const auto vault_path = std::filesystem::path(m_file.path().parent_path() / m_name).replace_extension();
-
-	if (exists(vault_path))
+	if (m_file.exists())
 		throw std::runtime_error(m_file.path().string() + " already exists");
 
-	Directory::create(vault_path.parent_path());
-	m_file.assign(vault_path);
+	Directory::create(m_file.path().parent_path());
 }
 
 void Vault::read_from_file()
@@ -150,7 +146,8 @@ void Vault::read_from_file()
 	if (root.name() != "vault"sv)
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
-	std::istringstream(root.attribute("lastWriteTime").value()) >> parse("%F %T", m_lastWriteTime);
+	m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
+	std::istringstream(root.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", m_lastWriteTime);
 
 	std::deque<std::pair<pugi::xml_node, std::reference_wrapper<Directory>>> dirs;
 	dirs.emplace_back(root, std::ref(*this));
@@ -161,17 +158,19 @@ void Vault::read_from_file()
 			if (child.name() == "file"sv)
 			{
 				const auto name = child.attribute("name").value();
+				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
 				auto data = child.attribute("data").value();
 				std::filesystem::file_time_type lastWriteTime;
-				std::istringstream(child.attribute("lastWriteTime").value()) >> parse("%F %T", lastWriteTime);
-				dir.get().children().push_back(std::make_unique<File>(name, lastWriteTime, data));
+				std::istringstream(child.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", lastWriteTime);
+				dir.get().children().push_back(std::make_unique<File>(name, lastWriteTime, permissions, data));
 			}
 			else if (child.name() == "directory"sv)
 			{
 				const auto name = child.attribute("name").value();
+				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
 				std::filesystem::file_time_type lastWriteTime;
-				std::istringstream(child.attribute("lastWriteTime").value()) >> parse("%F %T", lastWriteTime);
-				auto directory = std::make_unique<Directory>(name, lastWriteTime);
+				std::istringstream(child.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", lastWriteTime);
+				auto directory = std::make_unique<Directory>(name, lastWriteTime, permissions);
 				dirs.emplace_back(child, std::ref(*directory));
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -237,6 +236,7 @@ void Vault::write_content(pugi::xml_node& parentNode) const
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("lastWriteTime").set_value(std::format("{}", m_lastWriteTime).c_str());
+	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{
 		child->write_content(node);

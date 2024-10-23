@@ -2,8 +2,8 @@
 #include <format>
 #include <chrono>
 
-Directory::Directory(std::string name, const std::filesystem::file_time_type lastWriteTime):
-	Node(std::move(name), lastWriteTime)
+Directory::Directory(std::string name, const std::filesystem::file_time_type lastWriteTime, const std::filesystem::perms permissions):
+	Node(std::move(name), lastWriteTime, permissions)
 {
 }
 
@@ -24,6 +24,7 @@ void Directory::write_content(pugi::xml_node& parentNode) const
 		throw std::runtime_error("Failed to create directory node");
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("lastWriteTime").set_value(std::format("{}", m_lastWriteTime).c_str());
+	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{
 		child->write_content(node);
@@ -38,5 +39,6 @@ void Directory::create(const std::filesystem::path& parentPath) const
 	{
 		child->create(directory_path);
 	}
+	permissions(directory_path, m_permissions);
 	last_write_time(directory_path, m_lastWriteTime);
 }

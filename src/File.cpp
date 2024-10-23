@@ -5,8 +5,8 @@
 #include <format>
 #include <chrono>
 
-File::File(std::string name, const std::filesystem::file_time_type lastWriteTime, std::string data):
-	Node(std::move(name), lastWriteTime),
+File::File(std::string name, const std::filesystem::file_time_type lastWriteTime, const std::filesystem::perms permissions, std::string data):
+	Node(std::move(name), lastWriteTime, permissions),
 	m_data(std::move(data))
 {
 }
@@ -45,6 +45,7 @@ void File::write_content(pugi::xml_node& parentNode) const
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("data").set_value(m_data.c_str());
 	node.append_attribute("lastWriteTime").set_value(std::format("{}", m_lastWriteTime).c_str());
+	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 }
 
 void File::create(const std::filesystem::path& parentPath) const
@@ -57,5 +58,6 @@ void File::create(const std::filesystem::path& parentPath) const
 	const auto data = Botan::base64_decode(m_data);
 	file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
 	file.close();
+	permissions(full_path, m_permissions);
 	last_write_time(full_path, m_lastWriteTime);
 }

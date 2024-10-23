@@ -20,7 +20,7 @@ private:
 	bool m_opened;
 
 	void read_from_dir();
-	void write_to_dir();
+	void write_to_dir() const;
 	void read_from_file();
 	void write_to_file(bool compress, bool encrypt) const;
 
