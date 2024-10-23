@@ -8,6 +8,7 @@
 #include <sstream>
 #include <botan/base64.h>
 #include <chrono>
+#include <date.h>
 
 Vault::Vault(const std::filesystem::path& file):
 	Directory(file.stem().string(), last_write_time(file), status(file).permissions()),
@@ -147,7 +148,9 @@ void Vault::read_from_file()
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
 	m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
-	std::istringstream(root.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", m_lastWriteTime);
+	std::chrono::system_clock::time_point lastWriteTime;
+	std::istringstream(root.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
+	m_lastWriteTime = std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime);
 
 	std::deque<std::pair<pugi::xml_node, std::reference_wrapper<Directory>>> dirs;
 	dirs.emplace_back(root, std::ref(*this));
@@ -160,17 +163,15 @@ void Vault::read_from_file()
 				const auto name = child.attribute("name").value();
 				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
 				auto data = child.attribute("data").value();
-				std::filesystem::file_time_type lastWriteTime;
 				std::istringstream(child.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", lastWriteTime);
-				dir.get().children().push_back(std::make_unique<File>(name, lastWriteTime, permissions, data));
+				dir.get().children().push_back(std::make_unique<File>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions, data));
 			}
 			else if (child.name() == "directory"sv)
 			{
 				const auto name = child.attribute("name").value();
 				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
-				std::filesystem::file_time_type lastWriteTime;
 				std::istringstream(child.attribute("lastWriteTime").value()) >> std::chrono::parse("%F %T", lastWriteTime);
-				auto directory = std::make_unique<Directory>(name, lastWriteTime, permissions);
+				auto directory = std::make_unique<Directory>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions);
 				dirs.emplace_back(child, std::ref(*directory));
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -235,7 +236,7 @@ void Vault::write_content(pugi::xml_node& parentNode) const
 	if (!node)
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
-	node.append_attribute("lastWriteTime").set_value((std::ostringstream{} << m_lastWriteTime).str().c_str());
+	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
 	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{

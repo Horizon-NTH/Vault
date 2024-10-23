@@ -2,7 +2,7 @@
 #include <botan/base64.h>
 #include <fstream>
 #include <utility>
-#include <chrono>
+#include <date.h>
 
 File::File(std::string name, const std::filesystem::file_time_type lastWriteTime, const std::filesystem::perms permissions, std::string data):
 	Node(std::move(name), lastWriteTime, permissions),
@@ -43,7 +43,7 @@ void File::write_content(pugi::xml_node& parentNode) const
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("data").set_value(m_data.c_str());
-	node.append_attribute("lastWriteTime").set_value((std::ostringstream{} << m_lastWriteTime).str().c_str());
+	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
 	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 }
 

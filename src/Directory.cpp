@@ -1,5 +1,5 @@
 #include "Directory.h"
-#include <chrono>
+#include <date.h>
 
 Directory::Directory(std::string name, const std::filesystem::file_time_type lastWriteTime, const std::filesystem::perms permissions):
 	Node(std::move(name), lastWriteTime, permissions)
@@ -22,7 +22,7 @@ void Directory::write_content(pugi::xml_node& parentNode) const
 	if (!node)
 		throw std::runtime_error("Failed to create directory node");
 	node.append_attribute("name").set_value(m_name.c_str());
-	node.append_attribute("lastWriteTime").set_value((std::ostringstream{} << m_lastWriteTime).str().c_str());
+	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
 	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{

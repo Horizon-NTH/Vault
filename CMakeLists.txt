@@ -44,6 +44,12 @@ set(SOURCE_FILES
 	src/CompressionManager.cpp
 )
 
+# I need to use this library because Apple's clang doesn't std::chrono::parse.
+message(STATUS "Downloading date.h from HowardHinnant/date repository")
+file(DOWNLOAD
+	"https://raw.githubusercontent.com/HowardHinnant/date/master/include/date/date.h"
+	${CMAKE_BINARY_DIR}/date/date.h)
+
 find_package(Botan 3.5.0 REQUIRED)
 find_package(CLI11 2.4.2 REQUIRED)
 find_package(pugixml 1.12.1 REQUIRED)
@@ -54,7 +60,7 @@ set(PROJECT_LIB ${PROJECT_NAME}_lib)
 
 add_library(${PROJECT_LIB} STATIC ${HEADER_FILES} ${SOURCE_FILES})
 
-target_include_directories(${PROJECT_LIB} PUBLIC include)
+target_include_directories(${PROJECT_LIB} PUBLIC include ${CMAKE_BINARY_DIR}/date)
 target_compile_features(${PROJECT_LIB} PUBLIC cxx_std_20)
 target_compile_definitions(${PROJECT_LIB} PUBLIC PROJECT_VERSION="${PROJECT_VERSION}")
 target_link_libraries(${PROJECT_LIB} ${DEPS})
