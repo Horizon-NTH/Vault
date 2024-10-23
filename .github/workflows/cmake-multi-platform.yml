@@ -41,9 +41,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup GCC
-        if: matrix.c_compiler == 'gcc'
-        uses: Matt-DESTROYER/Use-GCC@v1.2
+      - name: Install GCC
+        if: matrix.os == 'ubuntu-latest' && matrix.c_compiler == 'gcc'
+        run: sudo apt-get update && sudo apt-get install -y gcc g++
+
+      - name: Install Clang on Ubuntu
+        if: matrix.os == 'ubuntu-latest' && matrix.c_compiler == 'clang'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Install Clang on MacOS
+        if: matrix.os == 'macos-latest' && matrix.c_compiler == 'clang'
+        run: |
+          brew install llvm
+          echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
 
       - name: Install Conan
         run: pip install conan
