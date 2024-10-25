@@ -114,7 +114,9 @@ TEST_F(VaultTest, CloseEmptyVault)
 
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
-    EXPECT_EQ(read_file("test_vault.vlt"), "<vault name=\"test_vault\" />\n");
+    const auto vaultContent = read_file("test_vault.vlt");
+    EXPECT_TRUE(vaultContent.starts_with("<vault name=\"test_vault\""));
+    EXPECT_TRUE(vaultContent.ends_with(" />\n"));
 }
 
 TEST_F(VaultTest, CloseWithCustomExtension)
@@ -414,3 +416,39 @@ TEST_F(VaultTest, OpenWithCompression)
 
     assert_test_vault_existence();
 }
+
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+TEST_F(VaultTest, CloseOpenKeepLastWriteTime)
+{
+    create_directory(m_temp_dir / "test_vault");
+    write_file("test_vault/file.txt", "Content of file.txt");
+    const auto dir_last_write_time = last_write_time(m_temp_dir / "test_vault");
+    const auto file_last_write_time = last_write_time(m_temp_dir / "test_vault/file.txt");
+
+    Vault vault(m_temp_dir / "test_vault");
+    vault.close();
+    vault.open();
+
+    EXPECT_EQ(last_write_time(m_temp_dir / "test_vault"), dir_last_write_time);
+    EXPECT_EQ(last_write_time(m_temp_dir / "test_vault/file.txt"), file_last_write_time);
+}
+#endif
+
+#if !defined(_WIN32)
+TEST_F(VaultTest, CloseOpenKeepPermissions)
+{
+    const auto vaultPath = m_temp_dir / "test_vault";
+    create_directory(vaultPath);
+    write_file("test_vault/file.txt", "Content of file.txt");
+
+    std::filesystem::permissions(vaultPath, std::filesystem::perms::none | std::filesystem::perms::owner_all);
+    std::filesystem::permissions(vaultPath / "file.txt", std::filesystem::perms::owner_all | std::filesystem::perms::others_exec | std::filesystem::perms::group_read);
+
+    Vault vault(vaultPath);
+    vault.close();
+    vault.open();
+
+    EXPECT_EQ(std::filesystem::status(vaultPath).permissions(), (std::filesystem::perms::none | std::filesystem::perms::owner_all));
+    EXPECT_EQ(std::filesystem::status(vaultPath / "file.txt").permissions(), (std::filesystem::perms::owner_all | std::filesystem::perms::others_exec | std::filesystem::perms::group_read));
+}
+#endif

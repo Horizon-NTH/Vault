@@ -6,7 +6,7 @@
 class File final : public Node
 {
 public:
-	File(std::string name, std::string data);
+	File(std::string name, std::filesystem::file_time_type lastWriteTime, std::filesystem::perms permissions, std::string data);
 
 	[[nodiscard]] const std::string& data() const;
 

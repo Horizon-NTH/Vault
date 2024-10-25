@@ -6,11 +6,13 @@
 #include <stack>
 #include <fstream>
 #include <sstream>
-#include <zlib.h>
 #include <botan/base64.h>
+#include <chrono>
+#include <date.h>
+#include <iostream>
 
 Vault::Vault(const std::filesystem::path& file):
-	Directory(file.stem().string()),
+	Directory(file.stem().string(), last_write_time(file), status(file).permissions()),
 	m_file(file),
 	m_opened(!m_file.is_regular_file())
 {
@@ -30,9 +32,10 @@ void Vault::open(const std::optional<std::filesystem::path>& destination)
 	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry(destination.value_or(m_file.path().parent_path()) / m_name);
 	try { write_to_dir(); }
-	catch ([[maybe_unused]] const std::exception& e)
+	catch (const std::exception& e)
 	{
-		remove_all(m_file);
+		if (!std::string(e.what()).ends_with("already exists"))
+			remove_all(m_file);
 		m_file = backUp;
 		rename(tempMove, m_file);
 		throw;
@@ -51,9 +54,10 @@ void Vault::close(const std::optional<std::filesystem::path>& destination, const
 	rename(m_file, tempMove);
 	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()) / m_name).replace_extension(extension.value_or(".vlt")));
 	try { write_to_file(compress, encrypt); }
-	catch ([[maybe_unused]] const std::exception& e)
+	catch (const std::exception& e)
 	{
-		remove_all(m_file);
+		if (!std::string(e.what()).ends_with("already exists"))
+			remove_all(m_file);
 		m_file = backUp;
 		rename(tempMove, m_file);
 		throw;
@@ -80,10 +84,13 @@ void Vault::read_from_dir()
 			if (entry.is_symlink())
 				throw std::runtime_error("Invalid vault file format: " + entry.path().string() + " is a symlink");
 			if (entry.is_regular_file())
-				dir.get().children().push_back(std::make_unique<File>(entry.path().filename().string(), Botan::base64_encode(File::read(entry.path()))));
+			{
+				const auto& path = entry.path();
+				dir.get().children().push_back(std::make_unique<File>(path.filename().string(), entry.last_write_time(), entry.status().permissions(), Botan::base64_encode(File::read(path))));
+			}
 			else if (entry.is_directory())
 			{
-				auto directory = std::make_unique<Directory>(entry.path().filename().string());
+				auto directory = std::make_unique<Directory>(entry.path().filename().string(), entry.last_write_time(), entry.status().permissions());
 				dirs_to_visit.emplace(entry.path(), *directory);
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -93,15 +100,12 @@ void Vault::read_from_dir()
 	}
 }
 
-void Vault::write_to_dir()
+void Vault::write_to_dir() const
 {
-	const auto vault_path = std::filesystem::path(m_file.path().parent_path() / m_name).replace_extension();
-
-	if (exists(vault_path))
+	if (m_file.exists())
 		throw std::runtime_error(m_file.path().string() + " already exists");
 
-	Directory::create(vault_path.parent_path());
-	m_file.assign(vault_path);
+	Directory::create(m_file.path().parent_path());
 }
 
 void Vault::read_from_file()
@@ -144,6 +148,15 @@ void Vault::read_from_file()
 	if (root.name() != "vault"sv)
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
+	if (root.attribute("permissions"))
+		m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
+	else
+		m_permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+	std::chrono::system_clock::time_point lastWriteTime;
+	std::istringstream(root.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
+	m_lastWriteTime = std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime);
+#endif
 
 	std::deque<std::pair<pugi::xml_node, std::reference_wrapper<Directory>>> dirs;
 	dirs.emplace_back(root, std::ref(*this));
@@ -154,13 +167,33 @@ void Vault::read_from_file()
 			if (child.name() == "file"sv)
 			{
 				const auto name = child.attribute("name").value();
+				std::filesystem::perms permissions;
+				if (child.attribute("permissions"))
+					permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				else
+					permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
 				auto data = child.attribute("data").value();
-				dir.get().children().push_back(std::make_unique<File>(name, data));
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
+				dir.get().children().push_back(std::make_unique<File>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions, data));
+#else
+				dir.get().children().push_back(std::make_unique<File>(name, std::filesystem::file_time_type::clock::now(), permissions, data));
+#endif
 			}
 			else if (child.name() == "directory"sv)
 			{
 				const auto name = child.attribute("name").value();
-				auto directory = std::make_unique<Directory>(name);
+				std::filesystem::perms permissions;
+				if (child.attribute("permissions"))
+					permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				else
+					permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
+				auto directory = std::make_unique<Directory>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions);
+#else
+				auto directory = std::make_unique<Directory>(name, std::filesystem::file_time_type::clock::now(), permissions);
+#endif
 				dirs.emplace_back(child, std::ref(*directory));
 				dir.get().children().push_back(std::move(directory));
 			}
@@ -225,6 +258,10 @@ void Vault::write_content(pugi::xml_node& parentNode) const
 	if (!node)
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
+#endif
+	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{
 		child->write_content(node);

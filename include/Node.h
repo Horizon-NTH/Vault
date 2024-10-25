@@ -6,7 +6,7 @@
 class Node
 {
 public:
-	explicit Node(std::string name);
+	Node(std::string name, std::filesystem::file_time_type lastWriteTime, std::filesystem::perms permissions);
 	virtual ~Node() = default;
 
 	virtual void write_content(pugi::xml_node& parentNode) const = 0;
@@ -14,4 +14,6 @@ public:
 
 protected:
 	std::string m_name;
+	std::filesystem::file_time_type m_lastWriteTime;
+	std::filesystem::perms m_permissions;
 };
