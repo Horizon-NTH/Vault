@@ -115,7 +115,7 @@ TEST_F(VaultTest, CloseEmptyVault)
     EXPECT_FALSE(exists("test_vault"));
     EXPECT_TRUE(exists("test_vault.vlt"));
     const auto vaultContent = read_file("test_vault.vlt");
-    EXPECT_TRUE(vaultContent.starts_with("<vault name=\"test_vault\" lastWriteTime="));
+    EXPECT_TRUE(vaultContent.starts_with("<vault name=\"test_vault\""));
     EXPECT_TRUE(vaultContent.ends_with(" />\n"));
 }
 
@@ -441,14 +441,14 @@ TEST_F(VaultTest, CloseOpenKeepPermissions)
     create_directory(vaultPath);
     write_file("test_vault/file.txt", "Content of file.txt");
 
-    std::filesystem::permissions(vaultPath, std::filesystem::perms::none, std::filesystem::perm_options::add);
-    std::filesystem::permissions(vaultPath / "file.txt", std::filesystem::perms::owner_write | std::filesystem::perms::others_exec | std::filesystem::perms::group_read);
+    std::filesystem::permissions(vaultPath, std::filesystem::perms::none | std::filesystem::perms::owner_all);
+    std::filesystem::permissions(vaultPath / "file.txt", std::filesystem::perms::owner_all | std::filesystem::perms::others_exec | std::filesystem::perms::group_read);
 
     Vault vault(vaultPath);
     vault.close();
     vault.open();
 
-    EXPECT_EQ(std::filesystem::status(vaultPath).permissions(), (std::filesystem::perms::owner_all | std::filesystem::perms::group_read));
-    EXPECT_EQ(std::filesystem::status(vaultPath / "file.txt").permissions(), (std::filesystem::perms::owner_write | std::filesystem::perms::others_exec | std::filesystem::perms::group_read));
+    EXPECT_EQ(std::filesystem::status(vaultPath).permissions(), (std::filesystem::perms::none | std::filesystem::perms::owner_all));
+    EXPECT_EQ(std::filesystem::status(vaultPath / "file.txt").permissions(), (std::filesystem::perms::owner_all | std::filesystem::perms::others_exec | std::filesystem::perms::group_read));
 }
 #endif

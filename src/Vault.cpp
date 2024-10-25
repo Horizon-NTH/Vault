@@ -9,6 +9,7 @@
 #include <botan/base64.h>
 #include <chrono>
 #include <date.h>
+#include <iostream>
 
 Vault::Vault(const std::filesystem::path& file):
 	Directory(file.stem().string(), last_write_time(file), status(file).permissions()),
@@ -147,7 +148,10 @@ void Vault::read_from_file()
 	if (root.name() != "vault"sv)
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
-	m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
+	if (root.attribute("permissions"))
+		m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
+	else
+		m_permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 	std::chrono::system_clock::time_point lastWriteTime;
 	std::istringstream(root.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
@@ -163,7 +167,11 @@ void Vault::read_from_file()
 			if (child.name() == "file"sv)
 			{
 				const auto name = child.attribute("name").value();
-				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				std::filesystem::perms permissions;
+				if (child.attribute("permissions"))
+					permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				else
+					permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
 				auto data = child.attribute("data").value();
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
@@ -175,7 +183,11 @@ void Vault::read_from_file()
 			else if (child.name() == "directory"sv)
 			{
 				const auto name = child.attribute("name").value();
-				const auto permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				std::filesystem::perms permissions;
+				if (child.attribute("permissions"))
+					permissions = static_cast<std::filesystem::perms>(child.attribute("permissions").as_uint());
+				else
+					permissions = std::filesystem::perms::owner_all | std::filesystem::perms::group_all | std::filesystem::perms::others_all;
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
 				auto directory = std::make_unique<Directory>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions);
