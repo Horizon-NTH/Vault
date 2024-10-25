@@ -44,7 +44,6 @@ set(SOURCE_FILES
 	src/CompressionManager.cpp
 )
 
-# I need to use this library because Apple's clang doesn't std::chrono::parse.
 message(STATUS "Downloading date.h from HowardHinnant/date repository")
 file(DOWNLOAD
 	"https://raw.githubusercontent.com/HowardHinnant/date/master/include/date/date.h"

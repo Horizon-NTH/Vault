@@ -58,5 +58,5 @@ void File::create(const std::filesystem::path& parentPath) const
 	file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
 	file.close();
 	permissions(full_path, m_permissions);
-	last_write_time(full_path, m_lastWriteTime);
+	std::filesystem::last_write_time(full_path, m_lastWriteTime);
 }

@@ -22,7 +22,9 @@ void Directory::write_content(pugi::xml_node& parentNode) const
 	if (!node)
 		throw std::runtime_error("Failed to create directory node");
 	node.append_attribute("name").set_value(m_name.c_str());
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
+#endif
 	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 	for (const auto& child : m_children)
 	{
@@ -39,5 +41,5 @@ void Directory::create(const std::filesystem::path& parentPath) const
 		child->create(directory_path);
 	}
 	permissions(directory_path, m_permissions);
-	last_write_time(directory_path, m_lastWriteTime);
+	std::filesystem::last_write_time(directory_path, m_lastWriteTime);
 }
