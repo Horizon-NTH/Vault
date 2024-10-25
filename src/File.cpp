@@ -43,7 +43,9 @@ void File::write_content(pugi::xml_node& parentNode) const
 		throw std::runtime_error("Failed to create the XML node");
 	node.append_attribute("name").set_value(m_name.c_str());
 	node.append_attribute("data").set_value(m_data.c_str());
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 	node.append_attribute("lastWriteTime").set_value(date::format("%F %T", std::chrono::clock_cast<std::chrono::system_clock>(m_lastWriteTime)).c_str());
+#endif
 	node.append_attribute("permissions").set_value(std::to_string(static_cast<int>(m_permissions)).c_str());
 }
 
@@ -58,5 +60,5 @@ void File::create(const std::filesystem::path& parentPath) const
 	file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
 	file.close();
 	permissions(full_path, m_permissions);
-	std::filesystem::last_write_time(full_path, m_lastWriteTime);
+	last_write_time(full_path, m_lastWriteTime);
 }

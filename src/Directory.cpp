@@ -41,5 +41,5 @@ void Directory::create(const std::filesystem::path& parentPath) const
 		child->create(directory_path);
 	}
 	permissions(directory_path, m_permissions);
-	std::filesystem::last_write_time(directory_path, m_lastWriteTime);
+	last_write_time(directory_path, m_lastWriteTime);
 }
