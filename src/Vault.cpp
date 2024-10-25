@@ -148,9 +148,9 @@ void Vault::read_from_file()
 		throw std::runtime_error("Invalid vault file format: missing vault tag");
 	m_name = root.attribute("name").value();
 	m_permissions = static_cast<std::filesystem::perms>(root.attribute("permissions").as_uint());
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 	std::chrono::system_clock::time_point lastWriteTime;
 	std::istringstream(root.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
-#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 	m_lastWriteTime = std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime);
 #endif
 
@@ -169,7 +169,7 @@ void Vault::read_from_file()
 				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
 				dir.get().children().push_back(std::make_unique<File>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions, data));
 #else
-				dir.get().children().push_back(std::make_unique<File>(name, lastWriteTime, permissions, data));
+				dir.get().children().push_back(std::make_unique<File>(name, std::filesystem::file_time_type::clock::now(), permissions, data));
 #endif
 			}
 			else if (child.name() == "directory"sv)
@@ -180,7 +180,7 @@ void Vault::read_from_file()
 				std::istringstream(child.attribute("lastWriteTime").value()) >> date::parse("%F %T", lastWriteTime);
 				auto directory = std::make_unique<Directory>(name, std::chrono::clock_cast<std::chrono::file_clock>(lastWriteTime), permissions);
 #else
-				auto directory = std::make_unique<Directory>(name, lastWriteTime, permissions);
+				auto directory = std::make_unique<Directory>(name, std::filesystem::file_time_type::clock::now(), permissions);
 #endif
 				dirs.emplace_back(child, std::ref(*directory));
 				dir.get().children().push_back(std::move(directory));

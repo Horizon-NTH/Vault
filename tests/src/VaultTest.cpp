@@ -417,6 +417,7 @@ TEST_F(VaultTest, OpenWithCompression)
     assert_test_vault_existence();
 }
 
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 TEST_F(VaultTest, CloseOpenKeepLastWriteTime)
 {
     create_directory(m_temp_dir / "test_vault");
@@ -431,6 +432,7 @@ TEST_F(VaultTest, CloseOpenKeepLastWriteTime)
     EXPECT_EQ(last_write_time(m_temp_dir / "test_vault"), dir_last_write_time);
     EXPECT_EQ(last_write_time(m_temp_dir / "test_vault/file.txt"), file_last_write_time);
 }
+#endif
 
 #if !defined(_WIN32)
 TEST_F(VaultTest, CloseOpenKeepPermissions)
