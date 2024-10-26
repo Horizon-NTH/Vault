@@ -63,6 +63,12 @@ To have a list of all available commands, you can use the `--help` option.
 vault [help | --help | -h]
 ```
 
+You can also check the **manual** page for more information.
+
+```shell
+man vault
+```
+
 ### Close a Vault
 
 To close a vault and save its contents to a single file, you can use the `close` command.

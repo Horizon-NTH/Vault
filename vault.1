@@ -1,0 +1,108 @@
+.TH vault 1 "October 2024" "vault 3.1" "User Commands"
+
+.SH NAME
+vault \- A small, portable file system with encryption capabilities.
+
+.SH SYNOPSIS
+.B vault
+[\-hv] [\fBopen\fR [\fIOPTIONS\fR] | \fBclose\fR [\fIOPTIONS\fR] | \fBhelp\fR | \fBversion\fR]
+
+.SH DESCRIPTION
+.B vault
+is a command-line application that provides a simple and secure file system with encryption support. Use it to open or close encrypted vaults for secure file storage and transfer.
+
+.SH GLOBAL OPTIONS
+.TP
+.B \-h, \-\-help
+Display the general help message and exit.
+
+.TP
+.B \-v, \-\-version
+Print the version information of the vault application and exit.
+
+.SH SUBCOMMANDS
+The following subcommands provide specific operations on vaults:
+
+.SS "vault help"
+Print a list of all subcommands and exit.
+
+.SS "vault version"
+Print the application version and exit.
+
+.SS "vault open"
+Open an encrypted vault and extract its contents to a specified directory.
+
+.IP \fBUSAGE\fR
+.B vault open [\fIOPTIONS\fR] \fIvault\fR [\fIdestination\fR]
+
+.IP \fBPositionals\fR
+.TP
+.B vault
+Path to the vault file to open (required).
+.TP
+.B destination
+Path to the destination directory where the contents will be extracted (optional).
+
+.IP \fBOptions\fR
+.TP
+.B \-h, \-\-help
+Display the help message for the \fBopen\fR command and exit.
+.TP
+.B \-v, \-\-vault
+Path to the vault file (required).
+.TP
+.B \-d, \-\-destination
+Path to the destination directory for extracted contents.
+
+.SS "vault close"
+Close an open vault by compressing or encrypting its contents back to a vault file.
+
+.IP \fBUSAGE\fR
+.B vault close [\fIOPTIONS\fR] \fIvault\fR [\fIdestination\fR] [\fIextension\fR]
+
+.IP \fBPositionals\fR
+.TP
+.B vault
+Path to the vault file (required).
+.TP
+.B destination
+Path to the destination directory containing the files to compress or encrypt (optional).
+.TP
+.B extension
+Extension to apply to the resulting vault file (optional).
+
+.IP \fBOptions\fR
+.TP
+.B \-h, \-\-help
+Display the help message for the \fBclose\fR command and exit.
+.TP
+.B \-v, \-\-vault
+Path to the vault file (required).
+.TP
+.B \-d, \-\-destination
+Path to the destination directory with the contents to store in the vault.
+.TP
+.B \-e, \-\-extension
+File extension to apply to the vault file.
+.TP
+.B \-E, \-\-encrypt
+Encrypt the vault file. A password prompt will appear.
+.TP
+.B \-C, \-\-compress
+Compress the vault file.
+
+.SH EXAMPLES
+To display general help:
+.PP
+.B vault \-h
+.PP
+To open a vault file:
+.PP
+.B vault open \-v /path/to/vault \-d /path/to/destination
+.PP
+To close and encrypt a vault file with compression:
+.PP
+.B vault close \-v /path/to/vault \-d /path/to/destination \-E \-C
+
+.SH SEE ALSO
+botan(3), cli11(3), pugixml(3), zlib(3)
