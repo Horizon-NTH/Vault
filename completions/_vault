@@ -1,0 +1,45 @@
+#compdef vault
+
+_vault_subcommands() {
+    local -a subcommands
+    subcommands=(
+        "open:Open a vault"
+        "close:Close an open vault"
+        "help:Display help information"
+        "version:Show version information"
+    )
+    _describe -t commands 'vault' subcommands
+}
+
+_vault() {
+    _arguments \
+        '(: -)'{-h,--help}'[Show help message and exit]' \
+        '(: -)'{-v,--version}'[Show version information]' \
+        '(-): : _vault_subcommands' \
+        '*:: :->subcommand'
+
+    if [[ $state == subcommand ]]
+    then
+            case $words[1] in
+                open)
+                    _arguments \
+                        '(- vault destination)'{-h,--help}'[Show help message for open]' \
+                        '(-h --help -v --vault vault)'{-v,--vault}'[Specify the vault file to open]:vault file:_files' \
+                        '(-h --help -d --destination destination)'{-d,--destination}'[Specify the destination directory]:destination:_directories' \
+                        + vault '(-h --help -v --vault)':vault:_directories \
+                        + destination '(-h --help -d --destination)'::destination:_directories
+                    ;;
+                close)
+                    _arguments \
+                        '(- vault destination)'{-h,--help}'[Show help message for close]' \
+                        '(-h --help -v --vault vault)'{-v,--vault}'[Specify the vault file to close]:vault:_directories' \
+                        '(-h --help -d --destination destination)'{-d,--destination}'[Specify the destination directory]:destination:_directories' \
+                        '(-h --help -e --extension)'{-e,--extension}'[Specify file extension for the vault]:extension:' \
+                        '(-h --help -E --encrypt)'{-E,--encrypt}'[Encrypt the vault file]' \
+                        '(-h --help -C --compress)'{-C,--compress}'[Compress the vault file]' \
+                        + vault '(-h --help -v --vault)':vault:_directories \
+                        + destination '(-h --help -d --destination)'::destination:_directories
+                    ;;
+            esac
+    fi
+}

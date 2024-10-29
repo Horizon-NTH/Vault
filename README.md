@@ -41,6 +41,8 @@ cmake .. [-DENABLE_TESTS=ON]
 make 
 ```
 
+### Install
+
 You can also install the application on your system using the following command:
 
 ```bash
@@ -56,6 +58,9 @@ vault <command> [options]
 ```
 
 ## Usage
+
+> [!TIP]
+> If you have [installed the app](#install), you will have auto-completion for both Zsh and Bash.
 
 To have a list of all available commands, you can use the `--help` option.
 
@@ -100,6 +105,7 @@ vault open <vault_name> [--destination <path>]
 - **[GoogleTest (gtest)](https://github.com/google/googletest)** is used for testing.
 - **[CLI11](https://github.com/CLIUtils/CLI11)** is used for command-line argument parsing.
 - **[PugiXML](https://pugixml.org/)** is used for XML parsing.
+- **[ZLib](https://zlib.net/)** is used for compression and decompression.
 
 ## License
 
