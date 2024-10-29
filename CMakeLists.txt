@@ -74,4 +74,11 @@ if (ENABLE_TESTS)
 endif ()
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
-install(FILES "${CMAKE_SOURCE_DIR}/vault.1" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/man/man1")
+
+set(MAN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/man/man1")
+install(FILES "${CMAKE_SOURCE_DIR}/vault.1" DESTINATION ${MAN_INSTALL_DIR})
+
+set(BASH_COMPLETION_DIR "/usr/share/bash-completion/completions")
+set(ZSH_COMPLETION_DIR "/usr/share/zsh/site-functions")
+install(FILES "${CMAKE_SOURCE_DIR}/completions/vault" DESTINATION ${BASH_COMPLETION_DIR})
+install(FILES "${CMAKE_SOURCE_DIR}/completions/_vault" DESTINATION ${ZSH_COMPLETION_DIR})

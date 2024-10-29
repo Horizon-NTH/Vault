@@ -1,0 +1,114 @@
+# Bash completion for vault
+
+_vault() {
+    local cur prev subcommands options
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    subcommands="open close help version"
+    global_options="--help --version -h -v"
+
+    if [[ "$COMP_CWORD" -eq 1 ]]; then
+        if [[ "$cur" == -* ]]; then
+            COMPREPLY=( $(compgen -W "$global_options" -- "$cur") )
+        else
+            COMPREPLY=( $(compgen -W "$subcommands" -- "$cur") )
+        fi
+    else
+        local has_help=false
+        local has_flag=false
+        local has_vault=false
+        local has_destination=false
+        local has_extension=false
+        local has_compress=false
+        local has_encrypt=false
+
+        for word in "${COMP_WORDS[@]}"; do
+            case "$word" in
+                -h|--help)
+                    has_help=true
+                    has_flag=true
+                    ;;
+                -v|--vault)
+                    has_vault=true
+                    has_flag=true
+                    ;;
+                -d|--destination)
+                    has_destination=true
+                    has_flag=true
+                    ;;
+                -e|--extension)
+                    has_extension=true
+                    has_flag=true
+                    ;;
+                -C|--compress)
+                    has_compress=true
+                    has_flag=true
+                    ;;
+                -E|--encrypt)
+                    has_encrypt=true
+                    has_flag=true
+                    ;;
+            esac
+        done
+
+        if [[ "$has_help" == true ]]; then
+            COMPREPLY=()
+        else
+            case "${COMP_WORDS[1]}" in
+                open)
+                    options=""
+                    [[ "$has_vault" == false ]] && options+="--vault -v "
+                    [[ "$has_destination" == false ]] && options+="--destination -d "
+                    [[ "$has_flag" == false ]] && options+="--help -h"
+                    case "$prev" in
+                        --vault|-v)
+                            COMPREPLY=( $(compgen -f -- "$cur") )
+                            return 0
+                            ;;
+                        --destination|-d)
+                            COMPREPLY=( $(compgen -d -- "$cur") )
+                            return 0
+                            ;;
+                    esac
+                    if [[ ! -z "$options" ]]; then
+                        COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+                    fi
+                    ;;
+                close)
+                    options=""
+                    [[ "$has_vault" == false ]] && options+="--vault -v "
+                    [[ "$has_destination" == false ]] && options+="--destination -d "
+                    [[ "$has_extension" == false ]] && options+="--extension -e "
+                    [[ "$has_flag" == false ]] && options+="--help -h"
+                    [[ "$has_compress" == false ]] && options+="--compress -C "
+                    [[ "$has_encrypt" == false ]] && options+="--encrypt -E "
+                    case "$prev" in
+                        --vault|-v)
+                            COMPREPLY=( $(compgen -d -- "$cur") )
+                            return 0
+                            ;;
+                        --destination|-d)
+                            COMPREPLY=( $(compgen -d -- "$cur") )
+                            return 0
+                            ;;
+                        --extension|-e)
+                            COMPREPLY=()
+                            return 0
+                            ;;
+                    esac
+                    if [[ ! -z "$options" ]]; then
+                        COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+                    fi
+                    ;;
+                help|version)
+                    COMPREPLY=()
+                    ;;
+            esac
+        fi
+    fi
+    return 0
+}
+
+complete -F _vault vault
