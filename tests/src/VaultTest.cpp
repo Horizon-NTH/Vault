@@ -168,12 +168,10 @@ TEST_F(VaultTest, OpenCloseNonExistent)
 {
     EXPECT_THROW({
         Vault vault(m_temp_dir / "test_vault.vlt");
-        vault.open();
         }, std::runtime_error);
 
     EXPECT_THROW({
         Vault vault(m_temp_dir / "test_vault");
-        vault.close();
         }, std::runtime_error);
 }
 
@@ -273,30 +271,27 @@ TEST_F(VaultTest, InvalidOpenVaultDirectory)
     create_directory(m_temp_dir / "test_vault");
     write_file("test_vault/file.txt", "Content of file.txt");
 
-    EXPECT_THROW({
-        Vault vault(m_temp_dir / "test_vault");
-        vault.open();
-        }, std::runtime_error) << "The vault is already open";
+    Vault vault(m_temp_dir / "test_vault");
+
+    EXPECT_THROW({vault.open();}, std::invalid_argument) << "The vault is already open";
 }
 
 TEST_F(VaultTest, InvalidCloseVaultFile)
 {
     write_file("test_vault.vlt", "<vault name=\"test_vault\">\n\t<file name=\"file.txt\" data=\"Q29udGVudCBvZiB0ZXN0X3ZhdWx0L2ZpbGUudHh0\"/>\n</vault>\n");
 
-    EXPECT_THROW({
-        Vault vault(m_temp_dir / "test_vault");
-        vault.close();
-        }, std::runtime_error) << "The vault is already closed";
+    Vault vault(m_temp_dir / "test_vault.vlt");
+
+    EXPECT_THROW({vault.close();}, std::invalid_argument) << "The vault is already closed";
 }
 
 TEST_F(VaultTest, IncorrectlyEncodedDataField)
 {
     write_file("test_vault_bad.vlt", R"(<vault name="test_vault_bad"><file name="fileExemple1.txt" data="InvalidBase64Data@#%"/></vault>)");
 
-    EXPECT_THROW({
-        Vault vault(m_temp_dir / "test_vault_bad.vlt");
-        vault.open();
-        }, Botan::Invalid_Argument) << "The data field is not correctly encoded in Base64";
+    Vault vault(m_temp_dir / "test_vault_bad.vlt");
+
+    EXPECT_THROW({vault.open();}, Botan::Invalid_Argument) << "The data field is not correctly encoded in Base64";
 }
 
 TEST_F(VaultTest, InvalidCloseWithSymbolicFile)
@@ -307,10 +302,9 @@ TEST_F(VaultTest, InvalidCloseWithSymbolicFile)
         write_file("test_vault/file.txt", "Content of file.txt");
         create_symlink(m_temp_dir / "test_vault/file.txt", m_temp_dir / "test_vault/file.link");
 
-        EXPECT_THROW({
-            Vault vault(m_temp_dir / "test_vault");
-            vault.close();
-            }, std::runtime_error) << "Symbolic links are not supported";
+        Vault vault(m_temp_dir / "test_vault");
+
+        EXPECT_THROW({vault.close();}, std::runtime_error) << "Symbolic links are not supported";
     }
     catch (...) {}
 }
@@ -322,10 +316,9 @@ TEST_F(VaultTest, InvalidCloseWithSymbolicDirectory)
         create_directories(m_temp_dir / "test_vault/inner");
         create_directory_symlink(m_temp_dir / "test_vault/inner", m_temp_dir / "test_vault/inner.link");
 
-        EXPECT_THROW({
-            Vault vault(m_temp_dir / "test_vault");
-            vault.close();
-            }, std::runtime_error) << "Symbolic links are not supported";
+        Vault vault(m_temp_dir / "test_vault");
+
+        EXPECT_THROW({vault.close();}, std::runtime_error) << "Symbolic links are not supported";
     }
     catch (...) {}
 }
@@ -378,20 +371,27 @@ TEST_F(VaultTest, InvalidCloseWithNonExistentDestination)
 {
     create_directory(m_temp_dir / "test_vault");
 
-    EXPECT_THROW({
-        Vault vault(m_temp_dir / "test_vault.vlt");
-        vault.close(m_temp_dir / "test_destination");
-        }, std::runtime_error);
+    Vault vault(m_temp_dir / "test_vault");
+
+    EXPECT_THROW({vault.close(m_temp_dir / "test_destination");}, std::runtime_error);
+}
+
+TEST_F(VaultTest, InvalidCloseWithDestinationInsideTheClosedVault)
+{
+    create_directory(m_temp_dir / "test_vault");
+
+    Vault vault(m_temp_dir / "test_vault");
+
+    EXPECT_THROW({vault.close(m_temp_dir / "test_vault");}, std::invalid_argument);
 }
 
 TEST_F(VaultTest, InvalidOpenWithNonExistentDestination)
 {
     write_file("test_vault.vlt", "<vault name=\"test_vault\">\n</vault>\n");
 
-    EXPECT_THROW({
-        Vault vault(m_temp_dir / "test_vault.vlt");
-        vault.open(m_temp_dir / "test_destination");
-        }, std::runtime_error);
+    Vault vault(m_temp_dir / "test_vault.vlt");
+
+    EXPECT_THROW({vault.open(m_temp_dir / "test_destination");}, std::runtime_error);
 }
 
 TEST_F(VaultTest, CloseWithCompression)

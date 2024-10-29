@@ -25,7 +25,7 @@ Vault::Vault(const std::filesystem::path& file):
 void Vault::open(const std::optional<std::filesystem::path>& destination)
 {
 	if (m_opened)
-		throw std::runtime_error("You can't open a vault that is already opened");
+		throw std::invalid_argument("You can't open a vault that is already opened");
 	read_from_file();
 	const auto backUp = m_file;
 	const auto tempMove = get_temp_name(backUp.path().parent_path());
@@ -49,10 +49,17 @@ void Vault::close(const std::optional<std::filesystem::path>& destination, const
 	if (!m_opened)
 		throw std::invalid_argument("You can't close a vault that is already closed");
 	read_from_dir();
+	if (destination.has_value())
+	{
+		const auto path = destination.value().lexically_normal();
+		const auto base = m_file.path().lexically_normal();
+		if (const auto mismatch_pair = std::mismatch(path.begin(), path.end(), base.begin(), base.end()); mismatch_pair.second == base.end())
+			throw std::invalid_argument("The destination must not be a subdirectory of the vault");
+	}
 	const auto backUp = m_file;
 	const auto tempMove = get_temp_name(backUp.path().parent_path());
 	rename(m_file, tempMove);
-	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()) / m_name).replace_extension(extension.value_or(".vlt")));
+	m_file = std::filesystem::directory_entry((destination.value_or(m_file.path().parent_path()).lexically_normal() / m_name).replace_extension(extension.value_or(".vlt")));
 	try { write_to_file(compress, encrypt); }
 	catch (const std::exception& e)
 	{

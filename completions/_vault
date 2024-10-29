@@ -26,7 +26,7 @@ _vault() {
                         '(- vault destination)'{-h,--help}'[Show help message for open]' \
                         '(-h --help -v --vault vault)'{-v,--vault}'[Specify the vault file to open]:vault file:_files' \
                         '(-h --help -d --destination destination)'{-d,--destination}'[Specify the destination directory]:destination:_directories' \
-                        + vault '(-h --help -v --vault)':vault:_directories \
+                        + vault '(-h --help -v --vault)':vault:_files \
                         + destination '(-h --help -d --destination)'::destination:_directories
                     ;;
                 close)
