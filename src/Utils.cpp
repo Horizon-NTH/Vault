@@ -56,6 +56,23 @@ std::optional<EncryptionManager::Password> ask_password_with_confirmation()
 	return std::nullopt;
 }
 
+Answer ask_confirmation(const std::string& question, const Answer defaultAnswer)
+{
+	if (defaultAnswer == Answer::ABORT)
+		throw std::invalid_argument("The default answer cannot be ABORT");
+	std::cout << question << (defaultAnswer == Answer::YES ? " [Y/n] " : " [y/N] ");
+	std::string answer;
+	std::getline(std::cin, answer);
+	if (answer.empty())
+		return defaultAnswer;
+	std::ranges::transform(answer, answer.begin(), tolower);
+	if (answer == "y" || answer == "yes")
+		return Answer::YES;
+	if (answer == "n" || answer == "no")
+		return Answer::NO;
+	return Answer::ABORT;
+}
+
 std::filesystem::path get_temp_name(const std::filesystem::path& parentPath)
 {
 	std::filesystem::path filePath;

@@ -1,5 +1,6 @@
 #include "Application.h"
-#include "Vault.h"
+
+#include "Utils.h"
 
 Application::Application(const std::span<const char*>& args, std::unique_ptr<VaultManager> vaultManager):
 	m_parser("A small, portable file system with encryption capabilities.", "vault"),
@@ -74,7 +75,15 @@ void Application::set_args_parsing()
 	close->add_option("extension, -e, --extension", *extension, "Extension of the vault file");
 	close->add_flag("-E, --encrypt", *encrypt, "Encrypt the vault file, you will be prompted for a password");
 	close->add_flag("-C, --compress", *compress, "Compress the vault file");
-	close->callback([this, vaultPath, destination, extension, encrypt, compress] { m_vaultManager->close_vault(*vaultPath, *destination, *extension, *compress, *encrypt); });
+	close->callback([this, vaultPath, destination, extension, encrypt, compress]
+		{
+			if (constexpr std::array args = {"-v", "--vault", "-d", "--destination", "-E", "--encrypt", "-C", "--compress"}; extension->has_value() && std::ranges::find(args, extension->value()) != args.end())
+			{
+				if (const auto answer = ask_confirmation("Your are trying to set the extension as " + extension->value() + " but it is a flag.\nAre you sure you want to continue?", Answer::NO); answer != Answer::YES)
+					return;
+			}
+			m_vaultManager->close_vault(*vaultPath, *destination, *extension, *compress, *encrypt);
+		});
 }
 
 void Application::print_version()
